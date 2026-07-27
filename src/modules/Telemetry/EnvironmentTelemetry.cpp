@@ -397,13 +397,19 @@ void EnvironmentTelemetryModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiSt
         e.weight = UnitConversions::displaySafeFloat(e.weight);
         e.distance = UnitConversions::displaySafeFloat(e.distance);
         e.radiation = UnitConversions::displaySafeFloat(e.radiation);
+        e.wind_speed = UnitConversions::displaySafeFloat(e.wind_speed);
+        e.wind_gust = UnitConversions::displaySafeFloat(e.wind_gust);
+        e.rainfall_1h = UnitConversions::displaySafeFloat(e.rainfall_1h);
+        e.rainfall_24h = UnitConversions::displaySafeFloat(e.rainfall_24h);
     }
 
     const auto &m = telemetry.variant.environment_metrics;
 
     // Check if any telemetry field has valid data
     bool hasAny = m.has_temperature || m.has_relative_humidity || m.barometric_pressure != 0 || m.iaq != 0 || m.voltage != 0 ||
-                  m.current != 0 || m.lux != 0 || m.white_lux != 0 || m.weight != 0 || m.distance != 0 || m.radiation != 0;
+                  m.current != 0 || m.lux != 0 || m.white_lux != 0 || m.weight != 0 || m.distance != 0 || m.radiation != 0 ||
+                  m.has_wind_speed || m.wind_speed != 0 || m.has_wind_gust || m.wind_gust != 0 || m.has_rainfall_1h || m.rainfall_1h != 0 ||
+                  m.has_rainfall_24h || m.rainfall_24h != 0;
 
     if (!hasAny) {
         display->drawString(x, currentY, "No Telemetry");
@@ -434,6 +440,21 @@ void EnvironmentTelemetryModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiSt
         entries.push_back("Hum: " + String(m.relative_humidity, 0) + "%");
     if (m.barometric_pressure != 0)
         entries.push_back("Prss: " + String(m.barometric_pressure, 0) + " hPa");
+    if (m.has_wind_speed || m.wind_speed != 0) {
+        String windStr = "Wind: " + String(m.wind_speed, 1) + "m/s";
+        if (m.has_wind_direction) {
+            windStr += " " + String(m.wind_direction) + "°";
+        }
+        entries.push_back(windStr);
+    }
+    if (m.has_wind_gust || m.wind_gust != 0) {
+        entries.push_back("Gust: " + String(m.wind_gust, 1) + "m/s");
+    }
+    if (m.has_rainfall_1h || m.rainfall_1h != 0) {
+        entries.push_back("Rain: " + String(m.rainfall_1h, 1) + "mm");
+    } else if (m.has_rainfall_24h || m.rainfall_24h != 0) {
+        entries.push_back("Rain24: " + String(m.rainfall_24h, 1) + "mm");
+    }
     if (m.iaq != 0) {
         String aqi = "IAQ: " + String(m.iaq);
         const char *bannerMsg = nullptr; // Default: no banner
