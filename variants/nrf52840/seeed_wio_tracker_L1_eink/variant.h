@@ -168,10 +168,10 @@ static const uint8_t SCL = PIN_WIRE_SCL;
 
 // trackball
 #define HAS_TRACKBALL 1
-#define TB_UP 25
-#define TB_DOWN 26
-#define TB_LEFT 27
-#define TB_RIGHT 28
+#define TB_UP 27
+#define TB_DOWN 28
+#define TB_LEFT 26
+#define TB_RIGHT 25
 #define TB_PRESS 29
 #define TB_DIRECTION FALLING
 
