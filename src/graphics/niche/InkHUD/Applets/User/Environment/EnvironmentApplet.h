@@ -24,7 +24,8 @@ class EnvironmentApplet : public Applet, public SinglePortModule
     bool hasData = false;
     meshtastic_EnvironmentMetrics envData = meshtastic_EnvironmentMetrics_init_zero;
     NodeNum senderNodeNum = 0;
-    std::string senderName;
+    std::string senderLongName;
+    std::string senderShortName;
     uint32_t lastRxTime = 0;
 };
 
