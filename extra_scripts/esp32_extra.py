@@ -9,7 +9,9 @@ from os.path import join
 Import("env")
 platform = env.PioPlatform()
 
-sys.path.append(join(platform.get_package_dir("tool-esptoolpy")))
+tool_dir = platform.get_package_dir("tool-esptoolpy")
+if tool_dir:
+    sys.path.append(join(tool_dir))
 # IntelHex workaround, remove after fixed upstream
 # https://github.com/platformio/platform-espressif32/issues/1632
 try:
