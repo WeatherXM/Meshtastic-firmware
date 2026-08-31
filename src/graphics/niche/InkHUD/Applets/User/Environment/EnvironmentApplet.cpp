@@ -309,8 +309,11 @@ void InkHUD::EnvironmentApplet::onRender(bool full)
     }
 
     if (isWide) {
-        // Landscape Mode: Single line footer
+        // Landscape Mode: Single line footer (Long name on left, short name on right)
         printAt(0, Y(1.0) - fontSmall.lineHeight(), longNameStr, LEFT, BOTTOM);
+        if (!shortNameStr.empty() && shortNameStr != longNameStr) {
+            printAt(X(1.0), Y(1.0) - fontSmall.lineHeight(), shortNameStr, RIGHT, BOTTOM);
+        }
     } else {
         // Portrait Mode: 2 Footer lines
         // Line above footer: Full node name

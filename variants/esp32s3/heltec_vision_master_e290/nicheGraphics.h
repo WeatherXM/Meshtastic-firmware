@@ -78,18 +78,19 @@ void setupNicheGraphics()
     inkhud->persistence->settings.rotation = 1;           // 90 degrees clockwise
     inkhud->persistence->settings.userTiles.count = 1;    // One tile only by default, keep things simple for new users
     inkhud->persistence->settings.optionalMenuItems.nextTile = false; // Behavior handled by aux button instead
+    inkhud->persistence->settings.optionalFeatures.batteryIcon = true;
 
     // Pick applets
     // Note: order of applets determines priority of "auto-show" feature
+    inkhud->addApplet("Environment", new InkHUD::EnvironmentApplet, true, true); // Activated, autoshown
     inkhud->addApplet("All Messages", new InkHUD::AllMessageApplet, true, true); // Activated, autoshown
     inkhud->addApplet("DMs", new InkHUD::DMApplet);                              // -
     inkhud->addApplet("Channel 0", new InkHUD::ThreadedMessageApplet(0));        // -
     inkhud->addApplet("Channel 1", new InkHUD::ThreadedMessageApplet(1));        // -
     inkhud->addApplet("Positions", new InkHUD::PositionsApplet, true);           // Activated
-    inkhud->addApplet("Favorites Map", new InkHUD::FavoritesMapApplet);          // -
     inkhud->addApplet("Recents List", new InkHUD::RecentsListApplet);            // -
-    inkhud->addApplet("Environment", new InkHUD::EnvironmentApplet, true, true); // Activated, autoshown
     inkhud->addApplet("Heard", new InkHUD::HeardApplet, true, false, 0);         // Activated, not autoshown, default on tile 0
+    inkhud->addApplet("Favorites Map", new InkHUD::FavoritesMapApplet, false, false); // -
 
     // Start running InkHUD
     inkhud->begin();
