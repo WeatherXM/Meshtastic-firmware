@@ -1,0 +1,216 @@
+#pragma once
+#define LGFX_USE_V1
+
+#include <LovyanGFX.hpp>
+#include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
+#include <lgfx/v1/platforms/esp32s3/Panel_RGB.hpp>
+
+#ifndef IO_EXPANDER
+#define IO_EXPANDER 0x40
+#endif
+
+#ifdef CUSTOM_TOUCH_DRIVER
+#include <bb_captouch.h>
+
+#define TOUCH_SDA 39
+#define TOUCH_SCL 40
+#define TOUCH_INT -1
+#define TOUCH_RST -1
+
+// Custom touch driver redirecting getTouch() to BBCapTouch for FT6336U on 0x48
+class LGFX_Touch : public lgfx::LGFX_Device
+{
+  public:
+    bool init_impl(bool use_reset, bool use_clear) override
+    {
+        bool result = LGFX_Device::init_impl(use_reset, use_clear);
+        bbct.init(TOUCH_SDA, TOUCH_SCL);
+        bbct.setOrientation(180, 480, 480);
+        return result;
+    }
+
+    LGFX_Touch *touch(void) { return this; }
+
+    int8_t getTouchInt(void) { return TOUCH_INT; }
+
+    bool getTouchXY(uint16_t *touchX, uint16_t *touchY)
+    {
+        TOUCHINFO ti;
+
+        if (bbct.getSamples(&ti)) {
+            if ((ti.x[0] || ti.y[0]) && ti.x[0] < 480 && ti.y[0] < 480) {
+                *touchX = ti.x[0];
+                *touchY = ti.y[0];
+                return true;
+            }
+        }
+        return false;
+    };
+
+    void wakeup(void) {}
+    void sleep(void) {}
+
+  private:
+    BBCapTouch bbct;
+};
+#endif
+
+class Panel_WG1200 : public lgfx::Panel_ST7701
+{
+  public:
+    bool init(bool use_reset) override
+    {
+        pinMode(5 | IO_EXPANDER, OUTPUT);
+        digitalWrite(5 | IO_EXPANDER, LOW);
+        delay(10);
+        digitalWrite(5 | IO_EXPANDER, HIGH);
+        delay(20);
+        pinMode(7 | IO_EXPANDER, OUTPUT);
+        digitalWrite(7 | IO_EXPANDER, LOW);
+        delay(10);
+        digitalWrite(7 | IO_EXPANDER, HIGH);
+        delay(20);
+        pinMode(41, OUTPUT);
+        pinMode(48, OUTPUT);
+        pinMode(4 | IO_EXPANDER, OUTPUT);
+        digitalWrite(4 | IO_EXPANDER, LOW);
+        bool res = lgfx::Panel_ST7701::init(use_reset);
+        digitalWrite(4 | IO_EXPANDER, HIGH);
+        return res;
+    }
+
+    const uint8_t *getInitCommands(uint8_t listno) const override
+    {
+        static constexpr const uint8_t list1[] = {0x36, 1,   0x10,                         // MADCTL for vertical flip
+                                                  0xFF, 5,   0x77, 0x01, 0x00, 0x00, 0x10, // Command2 BK0 SEL
+                                                  0xC7, 1,   0x04, // SDIR: X-direction Control (Horizontal Flip)
+                                                  0xFF, 5,   0x77, 0x01, 0x00, 0x00, 0x00, // Command2 BK0 DIS
+                                                  0xFF, 0xFF};
+        switch (listno) {
+        case 1:
+            return list1;
+        default:
+            return lgfx::Panel_ST7701::getInitCommands(listno);
+        }
+    }
+};
+
+#ifdef CUSTOM_TOUCH_DRIVER
+class LGFX_WG1200 : public LGFX_Touch
+#else
+class LGFX_WG1200 : public lgfx::LGFX_Device
+#endif
+{
+    Panel_WG1200 _panel_instance;
+    lgfx::Bus_RGB _bus_instance;
+    lgfx::Light_PWM _light_instance;
+    lgfx::Touch_FT5x06 _touch_instance;
+
+  public:
+    const uint16_t screenWidth = 480;
+    const uint16_t screenHeight = 480;
+
+    bool hasButton(void) { return true; }
+
+    LGFX_WG1200(void)
+    {
+        {
+            auto cfg = _panel_instance.config();
+            cfg.memory_width = 480;
+            cfg.memory_height = 480;
+            cfg.panel_width = screenWidth;
+            cfg.panel_height = screenHeight;
+            cfg.offset_x = 0;
+            cfg.offset_y = 0;
+            cfg.offset_rotation = 0;
+            _panel_instance.config(cfg);
+        }
+
+        {
+            auto cfg = _panel_instance.config_detail();
+            cfg.pin_cs = (4 | IO_EXPANDER);
+            cfg.pin_sclk = 41;
+            cfg.pin_mosi = 48;
+            cfg.use_psram = 1;
+            _panel_instance.config_detail(cfg);
+        }
+
+        {
+            auto cfg = _bus_instance.config();
+            cfg.panel = &_panel_instance;
+
+            cfg.pin_d0 = GPIO_NUM_15; // B0
+            cfg.pin_d1 = GPIO_NUM_14; // B1
+            cfg.pin_d2 = GPIO_NUM_13; // B2
+            cfg.pin_d3 = GPIO_NUM_12; // B3
+            cfg.pin_d4 = GPIO_NUM_11; // B4
+
+            cfg.pin_d5 = GPIO_NUM_10; // G0
+            cfg.pin_d6 = GPIO_NUM_9;  // G1
+            cfg.pin_d7 = GPIO_NUM_8;  // G2
+            cfg.pin_d8 = GPIO_NUM_7;  // G3
+            cfg.pin_d9 = GPIO_NUM_6;  // G4
+            cfg.pin_d10 = GPIO_NUM_5; // G5
+
+            cfg.pin_d11 = GPIO_NUM_4; // R0
+            cfg.pin_d12 = GPIO_NUM_3; // R1
+            cfg.pin_d13 = GPIO_NUM_2; // R2
+            cfg.pin_d14 = GPIO_NUM_1; // R3
+            cfg.pin_d15 = GPIO_NUM_0; // R4
+
+            cfg.pin_henable = GPIO_NUM_18;
+            cfg.pin_vsync = GPIO_NUM_17;
+            cfg.pin_hsync = GPIO_NUM_16;
+            cfg.pin_pclk = GPIO_NUM_21;
+            cfg.freq_write = 12000000;
+
+            // WeatherXM WG1200 GX panel timings
+            cfg.hsync_polarity = 0;
+            cfg.hsync_front_porch = 75;
+            cfg.hsync_pulse_width = 5;
+            cfg.hsync_back_porch = 80;
+
+            cfg.vsync_polarity = 0;
+            cfg.vsync_front_porch = 130;
+            cfg.vsync_pulse_width = 5;
+            cfg.vsync_back_porch = 135;
+
+            cfg.pclk_active_neg = 0;
+            cfg.de_idle_high = 1;
+            cfg.pclk_idle_high = 0;
+
+            _bus_instance.config(cfg);
+        }
+        _panel_instance.setBus(&_bus_instance);
+
+        {
+            auto cfg = _light_instance.config();
+            cfg.pin_bl = 45;
+            _light_instance.config(cfg);
+        }
+        _panel_instance.light(&_light_instance);
+
+#ifndef CUSTOM_TOUCH_DRIVER
+        {
+            auto cfg = _touch_instance.config();
+            cfg.pin_cs = GPIO_NUM_NC;
+            cfg.x_min = 0;
+            cfg.x_max = 479;
+            cfg.y_min = 0;
+            cfg.y_max = 479;
+            cfg.pin_int = GPIO_NUM_NC;
+            cfg.bus_shared = true;
+            cfg.offset_rotation = 0;
+
+            cfg.i2c_port = 0;
+            cfg.i2c_addr = 0x48;
+            cfg.pin_sda = -1;
+            cfg.pin_scl = -1;
+            cfg.freq = 400000;
+            _touch_instance.config(cfg);
+            _panel_instance.setTouch(&_touch_instance);
+        }
+#endif
+        setPanel(&_panel_instance);
+    }
+};

@@ -350,8 +350,8 @@ class LGFX : public lgfx::LGFX_Device
 
             cfg.pclk_idle_high = 1;
             cfg.pclk_active_neg = ST7265_PCLK_ACTIVE_NEG; // 0;
-            // cfg.pclk_idle_high = 0;
-            // cfg.de_idle_high = 1;
+                                                          // cfg.pclk_idle_high = 0;
+                                                          // cfg.de_idle_high = 1;
 #endif
 
 #ifdef ST7262_HSYNC_POLARITY
@@ -367,8 +367,8 @@ class LGFX : public lgfx::LGFX_Device
 
             cfg.pclk_idle_high = 1;
             cfg.pclk_active_neg = ST7262_PCLK_ACTIVE_NEG; // 0;
-            // cfg.pclk_idle_high = 0;
-            // cfg.de_idle_high = 1;
+                                                          // cfg.pclk_idle_high = 0;
+                                                          // cfg.de_idle_high = 1;
 #endif
 
 #ifdef SC7277_HSYNC_POLARITY
@@ -384,8 +384,8 @@ class LGFX : public lgfx::LGFX_Device
 
             cfg.pclk_idle_high = 1;
             cfg.pclk_active_neg = SC7277_PCLK_ACTIVE_NEG; // 0;
-            // cfg.pclk_idle_high = 0;
-            // cfg.de_idle_high = 1;
+                                                          // cfg.pclk_idle_high = 0;
+                                                          // cfg.de_idle_high = 1;
 #endif
 
             _bus_instance.config(cfg);
@@ -463,22 +463,22 @@ class LGFX : public lgfx::LGFX_Device
             // The following setting values ​​are general initial values ​​for each panel, so please comment out any
             // unknown items and try them.
 
-            cfg.memory_width = TFT_WIDTH;                 // Maximum width supported by the driver IC
-            cfg.memory_height = TFT_HEIGHT;               // Maximum height supported by the driver IC
-            cfg.panel_width = TFT_WIDTH;                  // actual displayable width
-            cfg.panel_height = TFT_HEIGHT;                // actual displayable height
-            cfg.offset_x = TFT_OFFSET_X;                  // Panel offset amount in X direction
-            cfg.offset_y = TFT_OFFSET_Y;                  // Panel offset amount in Y direction
-            cfg.offset_rotation = TFT_OFFSET_ROTATION;    // Rotation direction value offset 0~7 (4~7 is mirrored)
+            cfg.memory_width = TFT_WIDTH;              // Maximum width supported by the driver IC
+            cfg.memory_height = TFT_HEIGHT;            // Maximum height supported by the driver IC
+            cfg.panel_width = TFT_WIDTH;               // actual displayable width
+            cfg.panel_height = TFT_HEIGHT;             // actual displayable height
+            cfg.offset_x = TFT_OFFSET_X;               // Panel offset amount in X direction
+            cfg.offset_y = TFT_OFFSET_Y;               // Panel offset amount in Y direction
+            cfg.offset_rotation = TFT_OFFSET_ROTATION; // Rotation direction value offset 0~7 (4~7 is mirrored)
 #ifdef TFT_DUMMY_READ_PIXELS
             cfg.dummy_read_pixel = TFT_DUMMY_READ_PIXELS; // Number of bits for dummy read before pixel readout
 #else
             cfg.dummy_read_pixel = 9; // Number of bits for dummy read before pixel readout
 #endif
-            cfg.dummy_read_bits = 1;                      // Number of bits for dummy read before non-pixel data read
-            cfg.readable = true;                          // Set to true if data can be read
-            cfg.invert = true;                            // Set to true if the light/darkness of the panel is reversed
-            cfg.rgb_order = false;                        // Set to true if the panel's red and blue are swapped
+            cfg.dummy_read_bits = 1; // Number of bits for dummy read before non-pixel data read
+            cfg.readable = true;     // Set to true if data can be read
+            cfg.invert = true;       // Set to true if the light/darkness of the panel is reversed
+            cfg.rgb_order = false;   // Set to true if the panel's red and blue are swapped
             cfg.dlen_16bit =
                 false;             // Set to true for panels that transmit data length in 16-bit units with 16-bit parallel or SPI
             cfg.bus_shared = true; // If the bus is shared with the SD card, set to true (bus control with drawJpgFile etc.)
@@ -594,8 +594,8 @@ class TOUCH_CHSC6X : public ITouch
         return 0;
     };
 
-    void wakeup(void) override{};
-    void sleep(void) override{};
+    void wakeup(void) override {};
+    void sleep(void) override {};
 
   private:
     chsc6x *chsc6xTouch = nullptr;
@@ -633,7 +633,7 @@ class LGFX : public lgfx::LGFX_Device
 #ifdef SPI_3_WIRE
             cfg.spi_3wire = SPI_3_WIRE;
 #else
-            cfg.spi_3wire = true;                      // Set to true if reception is done on the MOSI pin
+            cfg.spi_3wire = true; // Set to true if reception is done on the MOSI pin
 #endif
             cfg.use_lock = true;               // Set to true to use transaction locking
             cfg.dma_channel = SPI_DMA_CH_AUTO; // SPI_DMA_CH_AUTO; // Set DMA channel to use (0=not use DMA / 1=1ch / 2=ch /
@@ -662,8 +662,8 @@ class LGFX : public lgfx::LGFX_Device
             cfg.memory_width = 240;
             cfg.memory_height = 320;
             cfg.offset_x = 0;
-            cfg.offset_y = 0;                             // No vertical shift needed - panel is top-aligned
-            cfg.offset_rotation = 2;                      // Rotate 180° to correct upside-down layout
+            cfg.offset_y = 0;        // No vertical shift needed - panel is top-aligned
+            cfg.offset_rotation = 2; // Rotate 180° to correct upside-down layout
 #else
             cfg.memory_width = TFT_WIDTH;              // Maximum width supported by the driver IC
             cfg.memory_height = TFT_HEIGHT;            // Maximum height supported by the driver IC
@@ -676,14 +676,14 @@ class LGFX : public lgfx::LGFX_Device
 #ifdef TFT_DUMMY_READ_PIXELS
             cfg.dummy_read_pixel = TFT_DUMMY_READ_PIXELS; // Number of bits for dummy read before pixel readout
 #else
-            cfg.dummy_read_pixel = 9;                  // Number of bits for dummy read before pixel readout
+            cfg.dummy_read_pixel = 9; // Number of bits for dummy read before pixel readout
 #endif
-            cfg.dummy_read_bits = 1;                      // Number of bits for dummy read before non-pixel data read
-            cfg.readable = true;                          // Set to true if data can be read
-            cfg.invert = true;                            // Set to true if the light/darkness of the panel is reversed
-            cfg.rgb_order = false;                        // Set to true if the panel's red and blue are swapped
+            cfg.dummy_read_bits = 1; // Number of bits for dummy read before non-pixel data read
+            cfg.readable = true;     // Set to true if data can be read
+            cfg.invert = true;       // Set to true if the light/darkness of the panel is reversed
+            cfg.rgb_order = false;   // Set to true if the panel's red and blue are swapped
             cfg.dlen_16bit =
-                false;             // Set to true for panels that transmit data length in 16-bit units with 16-bit parallel or SPI
+                false; // Set to true for panels that transmit data length in 16-bit units with 16-bit parallel or SPI
 #if defined(HAS_SDCARD)
             cfg.bus_shared = true; // If the bus is shared with the SD card, set to true (bus control with drawJpgFile etc.)
 #else
@@ -794,20 +794,20 @@ class LGFX : public lgfx::LGFX_Device
 
             // cfg.memory_width = TFT_WIDTH;              // Maximum width supported by the driver IC
             // cfg.memory_height = TFT_HEIGHT;            // Maximum height supported by the driver IC
-            cfg.panel_width = TFT_WIDTH;                  // actual displayable width
-            cfg.panel_height = TFT_HEIGHT;                // actual displayable height
-            cfg.offset_x = TFT_OFFSET_X;                  // Panel offset amount in X direction
-            cfg.offset_y = TFT_OFFSET_Y;                  // Panel offset amount in Y direction
-            cfg.offset_rotation = TFT_OFFSET_ROTATION;    // Rotation direction value offset 0~7 (4~7 is mirrored)
+            cfg.panel_width = TFT_WIDTH;               // actual displayable width
+            cfg.panel_height = TFT_HEIGHT;             // actual displayable height
+            cfg.offset_x = TFT_OFFSET_X;               // Panel offset amount in X direction
+            cfg.offset_y = TFT_OFFSET_Y;               // Panel offset amount in Y direction
+            cfg.offset_rotation = TFT_OFFSET_ROTATION; // Rotation direction value offset 0~7 (4~7 is mirrored)
 #ifdef TFT_DUMMY_READ_PIXELS
             cfg.dummy_read_pixel = TFT_DUMMY_READ_PIXELS; // Number of bits for dummy read before pixel readout
 #else
             cfg.dummy_read_pixel = 8; // Number of bits for dummy read before pixel readout
 #endif
-            cfg.dummy_read_bits = 1;                      // Number of bits for dummy read before non-pixel data read
-            cfg.readable = true;                          // Set to true if data can be read
-            cfg.invert = true;                            // Set to true if the light/darkness of the panel is reversed
-            cfg.rgb_order = false;                        // Set to true if the panel's red and blue are swapped
+            cfg.dummy_read_bits = 1; // Number of bits for dummy read before non-pixel data read
+            cfg.readable = true;     // Set to true if data can be read
+            cfg.invert = true;       // Set to true if the light/darkness of the panel is reversed
+            cfg.rgb_order = false;   // Set to true if the panel's red and blue are swapped
             cfg.dlen_16bit =
                 false;             // Set to true for panels that transmit data length in 16-bit units with 16-bit parallel or SPI
             cfg.bus_shared = true; // If the bus is shared with the SD card, set to true (bus control with drawJpgFile etc.)
@@ -1321,6 +1321,36 @@ static LGFX *tft = nullptr;
 class PanelInit_ST7701 : public lgfx::Panel_ST7701
 {
   public:
+    bool init(bool use_reset) override
+    {
+#if defined(WG1200) || defined(SENSECAP_INDICATOR)
+        pinMode(ST7701_CS, OUTPUT);
+        digitalWrite(ST7701_CS, HIGH);
+#ifdef ST7701_RESET
+        pinMode(ST7701_RESET, OUTPUT);
+        digitalWrite(ST7701_RESET, LOW);
+        delay(10);
+        digitalWrite(ST7701_RESET, HIGH);
+        delay(20);
+#endif
+#ifdef SCREEN_TOUCH_RST
+        pinMode(SCREEN_TOUCH_RST, OUTPUT);
+        digitalWrite(SCREEN_TOUCH_RST, LOW);
+        delay(10);
+        digitalWrite(SCREEN_TOUCH_RST, HIGH);
+        delay(20);
+#endif
+        pinMode(ST7701_SCK, OUTPUT);
+        pinMode(ST7701_SDA, OUTPUT);
+        digitalWrite(ST7701_CS, LOW);
+#endif
+        bool res = lgfx::Panel_ST7701::init(use_reset);
+#if defined(WG1200) || defined(SENSECAP_INDICATOR)
+        digitalWrite(ST7701_CS, HIGH);
+#endif
+        return res;
+    }
+
     const uint8_t *getInitCommands(uint8_t listno) const override
     {
         // 180 degree hw rotation: vertical flip, horizontal flip
@@ -1371,7 +1401,47 @@ class LGFX : public lgfx::LGFX_Device
         {
             auto cfg = _bus_instance.config();
             cfg.panel = &_panel_instance;
-#ifdef SENSECAP_INDICATOR
+#if defined(WG1200)
+            cfg.pin_d0 = GPIO_NUM_15; // B0
+            cfg.pin_d1 = GPIO_NUM_14; // B1
+            cfg.pin_d2 = GPIO_NUM_13; // B2
+            cfg.pin_d3 = GPIO_NUM_12; // B3
+            cfg.pin_d4 = GPIO_NUM_11; // B4
+
+            cfg.pin_d5 = GPIO_NUM_10; // G0
+            cfg.pin_d6 = GPIO_NUM_9;  // G1
+            cfg.pin_d7 = GPIO_NUM_8;  // G2
+            cfg.pin_d8 = GPIO_NUM_7;  // G3
+            cfg.pin_d9 = GPIO_NUM_6;  // G4
+            cfg.pin_d10 = GPIO_NUM_5; // G5
+
+            cfg.pin_d11 = GPIO_NUM_4; // R0
+            cfg.pin_d12 = GPIO_NUM_3; // R1
+            cfg.pin_d13 = GPIO_NUM_2; // R2
+            cfg.pin_d14 = GPIO_NUM_1; // R3
+            cfg.pin_d15 = GPIO_NUM_0; // R4
+
+            cfg.pin_henable = GPIO_NUM_18;
+            cfg.pin_vsync = GPIO_NUM_17;
+            cfg.pin_hsync = GPIO_NUM_16;
+            cfg.pin_pclk = GPIO_NUM_21;
+            cfg.freq_write = 12000000;
+
+            // WeatherXM WG1200 GX panel timings
+            cfg.hsync_polarity = 0;
+            cfg.hsync_front_porch = 75;
+            cfg.hsync_pulse_width = 5;
+            cfg.hsync_back_porch = 80;
+
+            cfg.vsync_polarity = 0;
+            cfg.vsync_front_porch = 130;
+            cfg.vsync_pulse_width = 5;
+            cfg.vsync_back_porch = 135;
+
+            cfg.pclk_active_neg = 0;
+            cfg.de_idle_high = 1;
+            cfg.pclk_idle_high = 0;
+#elif defined(SENSECAP_INDICATOR)
             cfg.pin_d0 = GPIO_NUM_15; // B0
             cfg.pin_d1 = GPIO_NUM_14; // B1
             cfg.pin_d2 = GPIO_NUM_13; // B2
@@ -1430,14 +1500,23 @@ class LGFX : public lgfx::LGFX_Device
             cfg.y_min = 0;
             cfg.y_max = 479;
             cfg.pin_int = -1; // don't use SCREEN_TOUCH_INT;
+#if defined(WG1200)
+            cfg.pin_rst = -1;
+#else
             cfg.pin_rst = SCREEN_TOUCH_RST;
+#endif
             cfg.bus_shared = true;
             cfg.offset_rotation = TFT_OFFSET_ROTATION;
 
             cfg.i2c_port = TOUCH_I2C_PORT;
             cfg.i2c_addr = TOUCH_SLAVE_ADDRESS;
+#if defined(WG1200)
+            cfg.pin_sda = -1;
+            cfg.pin_scl = -1;
+#else
             cfg.pin_sda = I2C_SDA;
             cfg.pin_scl = I2C_SCL;
+#endif
             cfg.freq = 400000;
             _touch_instance.config(cfg);
             _panel_instance.setTouch(&_touch_instance);
@@ -2099,9 +2178,10 @@ bool TFTDisplay::connect()
     tft->setRotation(1); // T-Deck has the TFT in landscape
 #elif defined(T_WATCH_S3)
     tft->setRotation(2); // T-Watch S3 left-handed orientation
-#elif ARCH_PORTDUINO || defined(SENSECAP_INDICATOR) || defined(T_LORA_PAGER) || defined(T_WATCH_ULTRA) ||                        \
+#elif ARCH_PORTDUINO || defined(SENSECAP_INDICATOR) || defined(WG1200) || defined(T_LORA_PAGER) || defined(T_WATCH_ULTRA) ||     \
     defined(SEEED_WIO_TRACKER_L2)
     tft->setRotation(0); // use config.yaml to set rotation
+
 #else
     tft->setRotation(3); // Orient horizontal and wide underneath the silkscreen name label
 #endif
