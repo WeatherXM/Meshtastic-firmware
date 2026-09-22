@@ -1,4 +1,8 @@
 #pragma once
+
+#ifdef __cplusplus
+#if __has_include(<LovyanGFX.hpp>) && (!defined(CUSTOM_TOUCH_DRIVER) || __has_include(<bb_captouch.h>))
+
 #define LGFX_USE_V1
 
 #include <LovyanGFX.hpp>
@@ -81,16 +85,140 @@ class Panel_WG1200 : public lgfx::Panel_ST7701
 
     const uint8_t *getInitCommands(uint8_t listno) const override
     {
-        static constexpr const uint8_t list1[] = {0x36, 1,   0x10,                         // MADCTL for vertical flip
-                                                  0xFF, 5,   0x77, 0x01, 0x00, 0x00, 0x10, // Command2 BK0 SEL
-                                                  0xC7, 1,   0x04, // SDIR: X-direction Control (Horizontal Flip)
-                                                  0xFF, 5,   0x77, 0x01, 0x00, 0x00, 0x00, // Command2 BK0 DIS
-                                                  0xFF, 0xFF};
+        // Exact 39 commands from WG1200 / SenseCAP Indicator BSP lcd_panel_config.c
+        static constexpr const uint8_t list0[] = {
+            0x11, CMD_INIT_DELAY,
+            120, // Sleep Out
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x10, 0xC0,
+            2,    0x3B,
+            0x00, // 480 lines (LNSET)
+            0xC1, 2,
+            0x0D, 0x02,
+            0xC2, 2,
+            0x31, 0x05,
+            0xC7, 1,
+            0x04, 0xCD,
+            1,    0x08,
+            0xB0, 16,
+            0x00, 0x11,
+            0x18, 0x0E,
+            0x11, 0x06,
+            0x07, 0x08,
+            0x07, 0x22,
+            0x04, 0x12,
+            0x0F, 0xAA,
+            0x31, 0x18,
+            0xB1, 16,
+            0x00, 0x11,
+            0x19, 0x0E,
+            0x12, 0x07,
+            0x08, 0x08,
+            0x08, 0x22,
+            0x04, 0x11,
+            0x11, 0xA9,
+            0x32, 0x18,
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x11, 0xB0,
+            1,    0x60,
+            0xB1, 1,
+            0x32, 0xB2,
+            1,    0x07,
+            0xB3, 1,
+            0x80, 0xB5,
+            1,    0x49,
+            0xB7, 1,
+            0x85, 0xB8,
+            1,    0x21,
+            0xC1, 1,
+            0x78, 0xC2,
+            1,    0x78,
+            0xE0, 3,
+            0x00, 0x1B,
+            0x02, 0xE1,
+            11,   0x08,
+            0xA0, 0x00,
+            0x00, 0x07,
+            0xA0, 0x00,
+            0x00, 0x00,
+            0x44, 0x44,
+            0xE2, 12,
+            0x11, 0x11,
+            0x44, 0x44,
+            0xED, 0xA0,
+            0x00, 0x00,
+            0xEC, 0xA0,
+            0x00, 0x00,
+            0xE3, 4,
+            0x00, 0x00,
+            0x11, 0x11,
+            0xE4, 2,
+            0x44, 0x44,
+            0xE5, 16,
+            0x0A, 0xE9,
+            0xD8, 0xA0,
+            0x0C, 0xEB,
+            0xD8, 0xA0,
+            0x0E, 0xED,
+            0xD8, 0xA0,
+            0x10, 0xEF,
+            0xD8, 0xA0,
+            0xE6, 4,
+            0x00, 0x00,
+            0x11, 0x11,
+            0xE7, 2,
+            0x44, 0x44,
+            0xE8, 16,
+            0x09, 0xE8,
+            0xD8, 0xA0,
+            0x0B, 0xEA,
+            0xD8, 0xA0,
+            0x0D, 0xEC,
+            0xD8, 0xA0,
+            0x0F, 0xEE,
+            0xD8, 0xA0,
+            0xEB, 7,
+            0x02, 0x00,
+            0xE4, 0xE4,
+            0x88, 0x00,
+            0x40, 0xEC,
+            2,    0x3C,
+            0x00, 0xED,
+            16,   0xAB,
+            0x89, 0x76,
+            0x54, 0x02,
+            0xFF, 0xFF,
+            0xFF, 0xFF,
+            0xFF, 0xFF,
+            0x20, 0x45,
+            0x67, 0x98,
+            0xBA, 0x36,
+            1,    0x10,
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x13, 0xE5,
+            1,    0xE4,
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x00, 0x3A,
+            1,    0x60,
+            0x21, 0, // Display Inversion On
+            0x11, CMD_INIT_DELAY,
+            120,     // Sleep Out
+            0x29, 0, // Display On
+            0xFF, 0xFF,
+        };
         switch (listno) {
-        case 1:
-            return list1;
+        case 0:
+            return list0;
         default:
-            return lgfx::Panel_ST7701::getInitCommands(listno);
+            return nullptr;
         }
     }
 };
@@ -128,7 +256,7 @@ class LGFX_WG1200 : public lgfx::LGFX_Device
 
         {
             auto cfg = _panel_instance.config_detail();
-            cfg.pin_cs = (4 | IO_EXPANDER);
+            cfg.pin_cs = -1;
             cfg.pin_sclk = 41;
             cfg.pin_mosi = 48;
             cfg.use_psram = 1;
@@ -214,3 +342,6 @@ class LGFX_WG1200 : public lgfx::LGFX_Device
         setPanel(&_panel_instance);
     }
 };
+
+#endif // __has_include(<LovyanGFX.hpp>)
+#endif // __cplusplus
