@@ -47,7 +47,7 @@
 using namespace httpsserver;
 
 #include "mesh/http/ContentHandler.h"
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
 #include "mesh/http/WeatherDashboard.h"
 #include "modules/WeatherXM/WeatherXMModule.h"
 #endif
@@ -90,7 +90,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     ResourceNode *nodeJsonFsBrowseStatic = new ResourceNode("/json/fs/browse/static", "GET", &handleFsBrowseStatic);
     ResourceNode *nodeJsonDelete = new ResourceNode("/json/fs/delete/static", "DELETE", &handleFsDeleteStatic);
 
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     ResourceNode *nodeWeather = new ResourceNode("/api/v1/weather", "GET", &handleAPIv1Weather);
     ResourceNode *nodeObservations = new ResourceNode("/api/v1/observations", "GET", &handleAPIv1Weather);
     ResourceNode *nodeObservation = new ResourceNode("/api/v1/observation", "GET", &handleAPIv1Weather);
@@ -115,7 +115,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     secureServer->registerNode(nodeJsonReport);
     secureServer->registerNode(nodeJsonNodes);
     secureServer->registerNode(nodeAdmin);
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     secureServer->registerNode(nodeWeather);
     secureServer->registerNode(nodeObservations);
     secureServer->registerNode(nodeObservation);
@@ -138,7 +138,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     insecureServer->registerNode(nodeJsonDelete);
     insecureServer->registerNode(nodeJsonReport);
     insecureServer->registerNode(nodeAdmin);
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     insecureServer->registerNode(nodeWeather);
     insecureServer->registerNode(nodeObservations);
     insecureServer->registerNode(nodeObservation);
@@ -796,7 +796,7 @@ void handleReport(HTTPRequest *req, HTTPResponse *res)
     out += jsonNum(WiFi.RSSI());
     out += "}";
 
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     if (weatherXMModule) {
         out += ",\"weather\":";
         out += weatherXMModule->getData().toJson(weatherXMModule->isImperial());
@@ -963,7 +963,7 @@ void handleScanNetworks(HTTPRequest *req, HTTPResponse *res)
     writeAll(res, out);
 }
 
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
 void handleAPIv1Weather(HTTPRequest *req, HTTPResponse *res)
 {
     if (webServerThread)

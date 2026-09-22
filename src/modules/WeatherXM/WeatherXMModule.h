@@ -2,7 +2,7 @@
 
 #include "configuration.h"
 
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
 
 #include "WeatherData.h"
 #include "concurrency/OSThread.h"

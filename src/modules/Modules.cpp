@@ -122,7 +122,7 @@
 #if defined(HAS_HARDWARE_WATCHDOG)
 #include "watchdog/watchdogThread.h"
 #endif
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
 #include "modules/WeatherXM/WeatherXMModule.h"
 #endif
 /**
@@ -292,7 +292,7 @@ void setupModules()
 #if defined(HAS_HARDWARE_WATCHDOG)
     watchdogThread = new WatchdogThread();
 #endif
-#if defined(WG1200) || defined(HAS_WEATHERXM)
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     weatherXMModule = new WeatherXMModule();
 #endif
     // Anything dropped into src/modules/optional/. Undefined, so compiled away, unless a module is
