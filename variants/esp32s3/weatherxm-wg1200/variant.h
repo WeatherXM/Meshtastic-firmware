@@ -66,5 +66,14 @@
 #define USE_VIRTUAL_KEYBOARD 1
 #define DISPLAY_CLOCK_FRAME 1
 
-// Onboard BMP390
+// Onboard BMP390 power switch and I2C gate (Q11/Q12 and Q19/Q20 on PCA9535 IO1_2)
+#define SENSOR_POWER_CTRL_EXPANDER (10 | IO_EXPANDER)
+#define SENSOR_POWER_ON_EXPANDER 1
 #define SENSOR_BMP_ADDR 0x77
+
+// MicroSD Card (shared SPI bus)
+#define SDCARD_CS (11 | IO_EXPANDER)
+#define SDCARD_DET (12 | IO_EXPANDER)
+
+// Buzzer (PCA9535 IO1_5, active-high beep; not supported by hardware PWM tone driver)
+// #define PIN_BUZZER (13 | IO_EXPANDER)

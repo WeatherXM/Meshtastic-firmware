@@ -644,13 +644,15 @@ void setup()
     mcp23017EarlyInit();
 #endif
 
-#ifdef SENSECAP_INDICATOR
-    // Power the RP2040 co-processor and start the interdevice link before the
-    // I2C scan, so that its bus can be probed through the bridge
 #ifdef SENSOR_POWER_CTRL_EXPANDER
     pinMode(SENSOR_POWER_CTRL_EXPANDER, OUTPUT);
     digitalWrite(SENSOR_POWER_CTRL_EXPANDER, SENSOR_POWER_ON_EXPANDER);
+    delay(10);
 #endif
+
+#ifdef SENSECAP_INDICATOR
+    // Power the RP2040 co-processor and start the interdevice link before the
+    // I2C scan, so that its bus can be probed through the bridge
     sensecapIndicator = new SensecapIndicator(Serial2);
     // the bus behind it is scanned right below and its devices are registered
     // once, so the link has to be up by then
