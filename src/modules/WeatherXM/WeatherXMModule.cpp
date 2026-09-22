@@ -6,7 +6,10 @@
 #include "UptimeClock.h"
 #include "decoders/WsDecoders.h"
 #include "graphics/ScreenFonts.h"
+#include "mesh/NodeDB.h"
 #include "mesh/Throttle.h"
+#include "mesh/mesh-pb-constants.h"
+#include <cmath>
 #include <cstdio>
 
 #if !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR && __has_include(<Adafruit_BMP3XX.h>)
@@ -15,26 +18,75 @@
 
 WeatherXMModule *weatherXMModule = nullptr;
 
-WeatherXMModule::WeatherXMModule()
-    : SinglePortModule("Weather", meshtastic_PortNum_PRIVATE_APP), concurrency::OSThread("WeatherXM")
+WeatherXMModule::WeatherXMModule() : MeshModule("Weather", meshtastic_PortNum_TELEMETRY_APP), concurrency::OSThread("WeatherXM")
 {
+    isPromiscuous = true;
+}
+
+bool WeatherXMModule::wantPacket(const meshtastic_MeshPacket *p)
+{
+    return p->decoded.portnum == meshtastic_PortNum_TELEMETRY_APP || p->decoded.portnum == meshtastic_PortNum_PRIVATE_APP;
+}
+
+ProcessMessage WeatherXMModule::handleReceived(const meshtastic_MeshPacket &mp)
+{
+    if (mp.which_payload_variant != meshtastic_MeshPacket_decoded_tag) {
+        return ProcessMessage::CONTINUE;
+    }
+
+    if (mp.decoded.portnum == meshtastic_PortNum_TELEMETRY_APP) {
+        meshtastic_Telemetry telemetry = meshtastic_Telemetry_init_zero;
+        if (pb_decode_from_bytes(mp.decoded.payload.bytes, mp.decoded.payload.size, &meshtastic_Telemetry_msg, &telemetry)) {
+            if (telemetry.which_variant == meshtastic_Telemetry_environment_metrics_tag) {
+                ingestMeshTelemetry(mp, telemetry.variant.environment_metrics);
+            }
+        }
+    } else if (mp.decoded.portnum == meshtastic_PortNum_PRIVATE_APP) {
+        processRawWsPacket(mp.decoded.payload.bytes, mp.decoded.payload.size, mp.rx_rssi, mp.rx_snr);
+    }
+
+    return ProcessMessage::CONTINUE;
 }
 
 void WeatherXMModule::setup()
 {
     LOG_INFO("WeatherXMModule initialized");
     updateOnboardSensors();
+    syncWithNodeDB();
+    updateActiveStationRotation();
     setInterval(2000);
 }
 
 int32_t WeatherXMModule::runOnce()
 {
-    uint32_t now = Time::getMillis();
     if (Throttle::hasElapsed(lastSensorPollMs, 3000)) {
-        lastSensorPollMs = now;
+        lastSensorPollMs = Time::getMillis();
         updateOnboardSensors();
     }
+    updateActiveStationRotation();
     return 2000;
+}
+
+void WeatherXMModule::nextStation()
+{
+    concurrency::LockGuard guard(&dataLock);
+    std::vector<uint32_t> pool = getActiveRotationPool();
+    if (pool.size() > 1) {
+        currentPoolIndex = (currentPoolIndex + 1) % pool.size();
+        lastFlipMs = Time::getMillis();
+        showingStationNode = pool[currentPoolIndex];
+        auto it = activeStations.find(showingStationNode);
+        if (it != activeStations.end()) {
+            currentData = it->second.data;
+            if (currentData.barometric_pressure <= 0.0f && hasOnboardBmp390) {
+                currentData.barometric_pressure = onboardPressureHpa;
+                currentData.has_bmp390 = true;
+            }
+        }
+        UIFrameEvent e;
+        e.action = UIFrameEvent::REDRAW_ONLY;
+        notifyObservers(&e);
+    }
 }
 
 void WeatherXMModule::updateOnboardSensors()
@@ -45,26 +97,238 @@ void WeatherXMModule::updateOnboardSensors()
         float press_hpa = bmp->pressure / 100.0f;
         float temp_c = bmp->temperature;
 
+        concurrency::LockGuard guard(&dataLock);
+        hasOnboardBmp390 = true;
+        onboardPressureHpa = press_hpa;
+        onboardTempC = temp_c;
+
         bool changed = (fabsf(currentData.barometric_pressure - press_hpa) > 0.05f);
-        currentData.barometric_pressure = press_hpa;
-        currentData.has_bmp390 = true;
 
         if (!currentData.has_station_data) {
+            currentData.barometric_pressure = press_hpa;
+            currentData.has_bmp390 = true;
             currentData.temperature = temp_c;
             currentData.feels_like = temp_c;
             currentData.humidity = 0.0f;
             currentData.dew_point = temp_c;
+            currentData.updateExtremes();
+        } else if (currentData.barometric_pressure <= 0.0f) {
+            currentData.barometric_pressure = press_hpa;
+            currentData.has_bmp390 = true;
         }
 
-        currentData.updateExtremes();
-
-        if (changed) {
+        if (changed && !currentData.has_station_data) {
             UIFrameEvent e;
             e.action = UIFrameEvent::REDRAW_ONLY;
             notifyObservers(&e);
         }
     }
 #endif
+}
+
+void WeatherXMModule::syncWithNodeDB()
+{
+    if (!nodeDB)
+        return;
+
+    auto envNodes = nodeDB->snapshotEnvironmentNodeNums(0);
+    for (uint32_t n : envNodes) {
+        if (activeStations.find(n) == activeStations.end()) {
+            meshtastic_EnvironmentMetrics env = meshtastic_EnvironmentMetrics_init_zero;
+            if (nodeDB->copyNodeEnvironment(n, env)) {
+                StationRecord &rec = activeStations[n];
+                rec.nodeNum = n;
+                rec.lastHeardMs = Time::getMillis();
+                mapEnvironmentMetricsToWeatherData(n, env, rec.data);
+                const auto *node = nodeDB->getMeshNode(n);
+                if (node && nodeInfoLiteHasUser(node) && node->long_name[0]) {
+                    snprintf(rec.data.station_name, sizeof(rec.data.station_name), "%s", node->long_name);
+                } else if (node && nodeInfoLiteHasUser(node) && node->short_name[0]) {
+                    snprintf(rec.data.station_name, sizeof(rec.data.station_name), "%s", node->short_name);
+                } else {
+                    snprintf(rec.data.station_name, sizeof(rec.data.station_name), "!%08x", (unsigned int)n);
+                }
+                rec.data.station_id = n;
+                rec.data.has_station_data = true;
+                rec.data.last_packet_time_ms = rec.lastHeardMs;
+            }
+        }
+    }
+}
+
+std::vector<uint32_t> WeatherXMModule::getActiveRotationPool()
+{
+    syncWithNodeDB();
+
+    std::vector<uint32_t> favorites;
+    std::vector<uint32_t> allStations;
+
+    for (auto it = activeStations.begin(); it != activeStations.end();) {
+        if (Throttle::hasElapsed(it->second.lastHeardMs, STATION_STALE_TIMEOUT_MS)) {
+            it = activeStations.erase(it);
+            continue;
+        }
+
+        uint32_t nodeNum = it->first;
+        allStations.push_back(nodeNum);
+        if (nodeDB && nodeDB->isFavorite(nodeNum)) {
+            favorites.push_back(nodeNum);
+        }
+        ++it;
+    }
+
+    if (!favorites.empty()) {
+        return favorites;
+    }
+
+    return allStations;
+}
+
+void WeatherXMModule::updateActiveStationRotation()
+{
+    concurrency::LockGuard guard(&dataLock);
+    std::vector<uint32_t> pool = getActiveRotationPool();
+
+    if (pool.empty()) {
+        showingStationNode = 0;
+        totalPoolSize = 0;
+        currentPoolIndex = 0;
+        currentData.has_station_data = false;
+        currentData.station_name[0] = '\0';
+        currentData.station_id = 0;
+        if (hasOnboardBmp390) {
+            currentData.barometric_pressure = onboardPressureHpa;
+            currentData.temperature = onboardTempC;
+            currentData.feels_like = onboardTempC;
+            currentData.dew_point = onboardTempC;
+            currentData.has_bmp390 = true;
+        }
+        return;
+    }
+
+    bool flipped = false;
+    totalPoolSize = pool.size();
+
+    if (totalPoolSize > 1) {
+        if (lastFlipMs == 0) {
+            lastFlipMs = Time::getMillis();
+        } else if (Throttle::hasElapsed(lastFlipMs, FLIP_INTERVAL_MS)) {
+            lastFlipMs = Time::getMillis();
+            currentPoolIndex = (currentPoolIndex + 1) % totalPoolSize;
+            flipped = true;
+        }
+    }
+
+    if (currentPoolIndex >= totalPoolSize) {
+        currentPoolIndex = 0;
+        flipped = true;
+    }
+
+    uint32_t selectedNode = pool[currentPoolIndex];
+    if (selectedNode != showingStationNode || flipped) {
+        showingStationNode = selectedNode;
+        auto it = activeStations.find(showingStationNode);
+        if (it != activeStations.end()) {
+            currentData = it->second.data;
+            if (currentData.barometric_pressure <= 0.0f && hasOnboardBmp390) {
+                currentData.barometric_pressure = onboardPressureHpa;
+                currentData.has_bmp390 = true;
+            }
+        }
+        if (flipped) {
+            UIFrameEvent e;
+            e.action = UIFrameEvent::REDRAW_ONLY;
+            notifyObservers(&e);
+        }
+    }
+}
+
+void WeatherXMModule::mapEnvironmentMetricsToWeatherData(uint32_t fromNode, const meshtastic_EnvironmentMetrics &env,
+                                                         weatherxm::WeatherData &data)
+{
+    if (env.has_temperature) {
+        data.temperature = env.temperature;
+    }
+    if (env.has_relative_humidity) {
+        data.humidity = env.relative_humidity;
+    }
+    if (env.has_barometric_pressure) {
+        data.barometric_pressure = env.barometric_pressure;
+    } else if (hasOnboardBmp390) {
+        data.barometric_pressure = onboardPressureHpa;
+    }
+    if (env.has_wind_speed) {
+        data.wind_speed = env.wind_speed;
+    }
+    if (env.has_wind_gust) {
+        data.wind_gust = env.wind_gust;
+    }
+    if (env.has_wind_direction) {
+        data.wind_direction = (uint16_t)(env.wind_direction % 360);
+    }
+    if (env.has_rainfall_1h) {
+        data.precipitation_rate = env.rainfall_1h;
+    }
+    if (env.has_rainfall_24h) {
+        data.precipitation_accum = env.rainfall_24h;
+    }
+    if (env.has_lux) {
+        data.solar_radiation = env.lux / 126.7f;
+    } else if (env.has_white_lux) {
+        data.solar_radiation = env.white_lux / 126.7f;
+    }
+    if (env.has_uv_lux) {
+        data.uv_index = (uint8_t)fminf(fmaxf(env.uv_lux, 0.0f), 15.0f);
+    }
+
+    data.dew_point = weatherxm::WeatherData::computeDewPoint(data.temperature, data.humidity);
+    data.feels_like = weatherxm::WeatherData::computeFeelsLike(data.temperature, data.humidity, data.wind_speed);
+    data.updateExtremes();
+}
+
+void WeatherXMModule::ingestMeshTelemetry(const meshtastic_MeshPacket &mp, const meshtastic_EnvironmentMetrics &env)
+{
+    uint32_t fromNode = getFrom(&mp);
+    if (!fromNode)
+        return;
+
+    concurrency::LockGuard guard(&dataLock);
+    StationRecord &rec = activeStations[fromNode];
+    rec.nodeNum = fromNode;
+    rec.lastHeardMs = Time::getMillis();
+
+    mapEnvironmentMetricsToWeatherData(fromNode, env, rec.data);
+
+    rec.data.station_id = fromNode;
+    const auto *node = nodeDB ? nodeDB->getMeshNode(fromNode) : nullptr;
+    if (node && nodeInfoLiteHasUser(node) && node->long_name[0]) {
+        snprintf(rec.data.station_name, sizeof(rec.data.station_name), "%s", node->long_name);
+    } else if (node && nodeInfoLiteHasUser(node) && node->short_name[0]) {
+        snprintf(rec.data.station_name, sizeof(rec.data.station_name), "%s", node->short_name);
+    } else {
+        snprintf(rec.data.station_name, sizeof(rec.data.station_name), "!%08x", (unsigned int)fromNode);
+    }
+
+    rec.data.rssi = mp.rx_rssi;
+    rec.data.snr = mp.rx_snr;
+    rec.data.last_packet_time_ms = rec.lastHeardMs;
+    rec.data.packet_count++;
+    rec.data.has_station_data = true;
+
+    LOG_INFO("WeatherXM received telemetry from %s (!%08x): T=%.1f C, H=%.0f %%, Wind=%.1f m/s", rec.data.station_name,
+             (unsigned int)fromNode, rec.data.temperature, rec.data.humidity, rec.data.wind_speed);
+
+    if (showingStationNode == fromNode || showingStationNode == 0) {
+        showingStationNode = fromNode;
+        currentData = rec.data;
+        if (currentData.barometric_pressure <= 0.0f && hasOnboardBmp390) {
+            currentData.barometric_pressure = onboardPressureHpa;
+            currentData.has_bmp390 = true;
+        }
+        UIFrameEvent e;
+        e.action = UIFrameEvent::REDRAW_ONLY;
+        notifyObservers(&e);
+    }
 }
 
 void WeatherXMModule::toggleUnits()
@@ -81,28 +345,44 @@ void WeatherXMModule::processRawWsPacket(const uint8_t *payload, size_t length, 
     if (!payload || length == 0)
         return;
 
+    concurrency::LockGuard guard(&dataLock);
     bool decoded = false;
+    weatherxm::WeatherData wsData;
+
     if (length >= 26 || (length >= 16 && payload[0] <= length)) {
-        decoded = weatherxm::WsDecoders::decodeWs1001(payload, length, currentData, rssi, snr);
+        decoded = weatherxm::WsDecoders::decodeWs1001(payload, length, wsData, rssi, snr);
     }
     if (!decoded && length >= 15) {
-        decoded = weatherxm::WsDecoders::decodeWs1300(payload, length, currentData, rssi, snr);
+        decoded = weatherxm::WsDecoders::decodeWs1300(payload, length, wsData, rssi, snr);
     }
 
     if (decoded) {
-        currentData.rssi = rssi;
-        currentData.snr = snr;
-        currentData.last_packet_time_ms = Time::getMillis();
-        currentData.packet_count++;
-        currentData.has_station_data = true;
-        currentData.updateExtremes();
+        uint32_t stationKey = wsData.station_id ? wsData.station_id : 0x57530001;
+        StationRecord &rec = activeStations[stationKey];
+        rec.nodeNum = stationKey;
+        rec.lastHeardMs = Time::getMillis();
+        rec.data = wsData;
+        rec.data.rssi = rssi;
+        rec.data.snr = snr;
+        rec.data.last_packet_time_ms = rec.lastHeardMs;
+        rec.data.packet_count++;
+        rec.data.has_station_data = true;
+        rec.data.updateExtremes();
 
-        LOG_INFO("WeatherXM packet #%lu decoded: T=%.1f C, H=%.0f %%, Wind=%.1f m/s", (unsigned long)currentData.packet_count,
-                 currentData.temperature, currentData.humidity, currentData.wind_speed);
+        LOG_INFO("WeatherXM packet #%lu decoded: %s (T=%.1f C, H=%.0f %%, Wind=%.1f m/s)", (unsigned long)rec.data.packet_count,
+                 rec.data.station_name, rec.data.temperature, rec.data.humidity, rec.data.wind_speed);
 
-        UIFrameEvent e;
-        e.action = UIFrameEvent::REDRAW_ONLY;
-        notifyObservers(&e);
+        if (showingStationNode == stationKey || showingStationNode == 0) {
+            showingStationNode = stationKey;
+            currentData = rec.data;
+            if (currentData.barometric_pressure <= 0.0f && hasOnboardBmp390) {
+                currentData.barometric_pressure = onboardPressureHpa;
+                currentData.has_bmp390 = true;
+            }
+            UIFrameEvent e;
+            e.action = UIFrameEvent::REDRAW_ONLY;
+            notifyObservers(&e);
+        }
     } else {
         LOG_WARN("WeatherXM packet CRC/checksum failed (len=%zu)", length);
     }
@@ -110,6 +390,8 @@ void WeatherXMModule::processRawWsPacket(const uint8_t *payload, size_t length, 
 
 void WeatherXMModule::drawFrame(OLEDDisplay *display, OLEDDisplayUiState *state, int16_t x, int16_t y)
 {
+    updateActiveStationRotation();
+
     display->setColor(WHITE);
     drawHeader(display, x, y);
     drawTempCard(display, x, y);
@@ -132,15 +414,25 @@ void WeatherXMModule::drawHeader(OLEDDisplay *display, int16_t x, int16_t y)
 
     display->setFont(FONT_SMALL);
     if (currentData.has_station_data && currentData.station_name[0]) {
-        display->drawString(x + 185, y + 14, currentData.station_name);
+        bool isFav = (showingStationNode && nodeDB && nodeDB->isFavorite(showingStationNode));
+        char nameBuf[48];
+        if (totalPoolSize > 1) {
+            snprintf(nameBuf, sizeof(nameBuf), "%s%s (%u/%u)", isFav ? "[FAV] " : "", currentData.station_name,
+                     (unsigned int)(currentPoolIndex + 1), (unsigned int)totalPoolSize);
+        } else if (isFav) {
+            snprintf(nameBuf, sizeof(nameBuf), "[FAV] %s", currentData.station_name);
+        } else {
+            snprintf(nameBuf, sizeof(nameBuf), "%s", currentData.station_name);
+        }
+        display->drawString(x + 175, y + 14, nameBuf);
     } else {
         display->drawString(x + 175, y + 14, "MESHTASTIC NODE");
     }
 
     display->setTextAlignment(TEXT_ALIGN_RIGHT);
     if (currentData.has_station_data) {
-        char pktBuf[24];
-        snprintf(pktBuf, sizeof(pktBuf), "PKT #%lu", (unsigned long)currentData.packet_count);
+        char pktBuf[28];
+        snprintf(pktBuf, sizeof(pktBuf), "#%lu", (unsigned long)currentData.packet_count);
         display->drawString(x + 468, y + 14, pktBuf);
     } else {
         display->drawString(x + 468, y + 14, currentData.has_bmp390 ? "BMP390 ACTIVE" : "STANDBY");

@@ -994,11 +994,14 @@ void handleAPIv1WeatherInfo(HTTPRequest *req, HTTPResponse *res)
     char buf[512];
     snprintf(buf, sizeof(buf),
              "{\"station_id\":%lu,\"station_type\":\"%s\",\"model\":\"WeatherXM WG1200\","
-             "\"firmware\":\"Meshtastic WG1200\",\"has_bmp390\":%s,\"has_station\":%s}",
+             "\"firmware\":\"Meshtastic "
+             "WG1200\",\"has_bmp390\":%s,\"has_station\":%s,\"station_count\":%u,\"active_station\":\"%s\"}",
              weatherXMModule ? (unsigned long)weatherXMModule->getData().station_id : 0UL,
              weatherXMModule ? (weatherXMModule->getData().has_station_data ? "WS1001/WS1300" : "ONBOARD") : "NONE",
              (weatherXMModule && weatherXMModule->getData().has_bmp390) ? "true" : "false",
-             (weatherXMModule && weatherXMModule->getData().has_station_data) ? "true" : "false");
+             (weatherXMModule && weatherXMModule->getData().has_station_data) ? "true" : "false",
+             weatherXMModule ? (unsigned int)weatherXMModule->getActiveStationCount() : 0U,
+             weatherXMModule ? weatherXMModule->getData().station_name : "");
 
     std::string out(buf);
     writeAll(res, out);
