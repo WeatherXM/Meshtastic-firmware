@@ -462,7 +462,7 @@ void setup()
     LOG_INFO("\n\n//\\ E S H T /\\ S T / C\n");
 
 #if defined(ARCH_ESP32) && defined(BOARD_HAS_PSRAM)
-#ifndef SENSECAP_INDICATOR
+#if !defined(SENSECAP_INDICATOR) && !defined(WG1200)
     // use PSRAM for malloc calls > 2048 bytes
     heap_caps_malloc_extmem_enable(2048);
 #endif
@@ -1152,7 +1152,7 @@ void setup()
 #endif
 #endif
 
-#if defined(SENSECAP_INDICATOR)
+#if defined(RESTART_LORA_SPI_AFTER_TFT_INIT) || defined(SENSECAP_INDICATOR)
     // The ST7701 panel shares SCK/MOSI/MISO (41/48/47) with the SX1262, and its host is SPI2_HOST,
     // which on the S3 is the same peripheral as the Arduino `SPI` object (FSPI == SPI2).
     // LovyanGFX bit-bangs the ST7701 init sequence on those pins, and because this variant builds

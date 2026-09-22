@@ -322,7 +322,7 @@ void doDeepSleep(uint32_t msecToWake, bool skipPreflight = false, bool skipSaveN
             gpio_hold_en((gpio_num_t)BUTTON_PIN);
     }
 #endif
-#ifdef SENSECAP_INDICATOR
+#if defined(SENSECAP_INDICATOR) || defined(WG1200)
     // Portexpander definition does not pass GPIO_IS_VALID_OUTPUT_GPIO
     pinMode(LORA_CS, OUTPUT);
     digitalWrite(LORA_CS, HIGH);
