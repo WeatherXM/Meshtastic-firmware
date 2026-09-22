@@ -48,6 +48,7 @@ using namespace httpsserver;
 
 #include "mesh/http/ContentHandler.h"
 #if defined(WG1200) || defined(HAS_WEATHERXM)
+#include "mesh/http/WeatherDashboard.h"
 #include "modules/WeatherXM/WeatherXMModule.h"
 #endif
 
@@ -94,6 +95,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     ResourceNode *nodeObservations = new ResourceNode("/api/v1/observations", "GET", &handleAPIv1Weather);
     ResourceNode *nodeObservation = new ResourceNode("/api/v1/observation", "GET", &handleAPIv1Weather);
     ResourceNode *nodeWxInfo = new ResourceNode("/api/v1/info", "GET", &handleAPIv1WeatherInfo);
+    ResourceNode *nodeWeatherUi = new ResourceNode("/weather", "GET", &handleWeatherDashboard);
 #endif
 
     ResourceNode *nodeRoot = new ResourceNode("/*", "GET", &handleStatic);
@@ -116,6 +118,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     secureServer->registerNode(nodeObservations);
     secureServer->registerNode(nodeObservation);
     secureServer->registerNode(nodeWxInfo);
+    secureServer->registerNode(nodeWeatherUi);
 #endif
     secureServer->registerNode(nodeRoot); // This has to be last
 
@@ -136,6 +139,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     insecureServer->registerNode(nodeObservations);
     insecureServer->registerNode(nodeObservation);
     insecureServer->registerNode(nodeWxInfo);
+    insecureServer->registerNode(nodeWeatherUi);
 #endif
     insecureServer->registerNode(nodeRoot); // This has to be last
 }
@@ -786,6 +790,13 @@ void handleReport(HTTPRequest *req, HTTPResponse *res)
     out += jsonNum(WiFi.RSSI());
     out += "}";
 
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+    if (weatherXMModule) {
+        out += ",\"weather\":";
+        out += weatherXMModule->getData().toJson(weatherXMModule->isImperial());
+    }
+#endif
+
     out += "},\"status\":\"ok\"}";
 
     writeAll(res, out);
@@ -985,6 +996,18 @@ void handleAPIv1WeatherInfo(HTTPRequest *req, HTTPResponse *res)
 
     std::string out(buf);
     writeAll(res, out);
+}
+
+void handleWeatherDashboard(HTTPRequest *req, HTTPResponse *res)
+{
+    if (webServerThread)
+        webServerThread->markActivity();
+
+    res->setHeader("Content-Type", "text/html");
+    res->setHeader("Access-Control-Allow-Origin", "*");
+    res->setHeader("Access-Control-Allow-Methods", "GET");
+
+    res->print(WEATHER_DASHBOARD_HTML);
 }
 #endif
 #endif
