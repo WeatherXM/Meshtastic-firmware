@@ -10,6 +10,10 @@
 #include "graphics/driver/DisplayDriverConfig.h"
 #include "util/ISpiLock.h"
 
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
+#include "modules/WeatherXM/WeatherXMTFTView.h"
+#endif
+
 #ifdef ARCH_PORTDUINO
 #include "PortduinoGlue.h"
 #endif
@@ -417,6 +421,9 @@ void tftSetup(void)
 #endif
 
     if (deviceScreen) {
+#if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
+        WeatherXMTFTView::init();
+#endif
 #ifdef ARCH_ESP32
         if (!tftSleepObserver) {
             tftSleepObserver = new CallbackObserver<DeviceScreen, void *>(deviceScreen, &DeviceScreen::prepareSleep);

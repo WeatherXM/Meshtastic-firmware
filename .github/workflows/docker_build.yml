@@ -111,7 +111,7 @@ jobs:
           BASE_REF: ${{ github.event.merge_group.base_ref || github.event.pull_request.base.ref || github.ref_name }}
         run: |
           base=$(echo "${BASE_REF#refs/heads/}" | sed 's/\//_/g')
-          ref=ghcr.io/${{ github.repository }}-cache:${base}-${{ inputs.distro }}-${{ steps.sanitize_platform.outputs.cleaned_platform }}
+          ref=$(echo "ghcr.io/${{ github.repository }}-cache:${base}-${{ inputs.distro }}-${{ steps.sanitize_platform.outputs.cleaned_platform }}" | tr '[:upper:]' '[:lower:]')
           echo "cache_from=type=registry,ref=${ref}" >> $GITHUB_OUTPUT
           case "${GITHUB_EVENT_NAME}" in
             merge_group|pull_request) ;;

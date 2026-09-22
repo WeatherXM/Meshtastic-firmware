@@ -877,6 +877,9 @@ void setup()
     // Initialize transmit history to persist broadcast throttle timers across reboots
     TransmitHistory::getInstance()->loadFromDisk();
 #if HAS_TFT
+    if (config.display.displaymode == meshtastic_Config_DisplayConfig_DisplayMode_DEFAULT) {
+        config.display.displaymode = meshtastic_Config_DisplayConfig_DisplayMode_COLOR;
+    }
     if (config.display.displaymode == meshtastic_Config_DisplayConfig_DisplayMode_COLOR) {
         tftSetup();
     }

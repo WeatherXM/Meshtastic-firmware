@@ -89,6 +89,40 @@ void WeatherXMModule::nextStation()
     }
 }
 
+void WeatherXMModule::prevStation()
+{
+    concurrency::LockGuard guard(&dataLock);
+    std::vector<uint32_t> pool = getActiveRotationPool();
+    if (pool.size() > 1) {
+        currentPoolIndex = (currentPoolIndex == 0) ? (pool.size() - 1) : (currentPoolIndex - 1);
+        lastFlipMs = Time::getMillis();
+        showingStationNode = pool[currentPoolIndex];
+        auto it = activeStations.find(showingStationNode);
+        if (it != activeStations.end()) {
+            currentData = it->second.data;
+            if (currentData.barometric_pressure <= 0.0f && hasOnboardBmp390) {
+                currentData.barometric_pressure = onboardPressureHpa;
+                currentData.has_bmp390 = true;
+            }
+        }
+        UIFrameEvent e;
+        e.action = UIFrameEvent::REDRAW_ONLY;
+        notifyObservers(&e);
+    }
+}
+
+bool WeatherXMModule::getWeatherDataCopy(weatherxm::WeatherData &out)
+{
+    concurrency::LockGuard guard(&dataLock);
+    out = currentData;
+    return true;
+}
+
+bool WeatherXMModule::isCurrentStationFavorite() const
+{
+    return (showingStationNode != 0 && nodeDB && nodeDB->isFavorite(showingStationNode));
+}
+
 void WeatherXMModule::updateOnboardSensors()
 {
 #if !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR && __has_include(<Adafruit_BMP3XX.h>)
@@ -209,7 +243,7 @@ void WeatherXMModule::updateActiveStationRotation()
     bool flipped = false;
     totalPoolSize = pool.size();
 
-    if (totalPoolSize > 1) {
+    if (totalPoolSize > 1 && autoRotateEnabled) {
         if (lastFlipMs == 0) {
             lastFlipMs = Time::getMillis();
         } else if (Throttle::hasElapsed(lastFlipMs, FLIP_INTERVAL_MS)) {

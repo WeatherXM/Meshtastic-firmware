@@ -34,6 +34,7 @@ class WeatherXMModule : public MeshModule, public Observable<const UIFrameEvent 
     // Data access
     const weatherxm::WeatherData &getData() const { return currentData; }
     weatherxm::WeatherData &getMutableData() { return currentData; }
+    bool getWeatherDataCopy(weatherxm::WeatherData &out);
 
     // Units toggle
     void toggleUnits();
@@ -42,8 +43,13 @@ class WeatherXMModule : public MeshModule, public Observable<const UIFrameEvent 
 
     // Station rotation
     void nextStation();
+    void prevStation();
     uint32_t getActiveStationNode() const { return showingStationNode; }
     size_t getActiveStationCount() const { return totalPoolSize; }
+    size_t getCurrentPoolIndex() const { return currentPoolIndex; }
+    bool isCurrentStationFavorite() const;
+    void setAutoRotate(bool enabled) { autoRotateEnabled = enabled; }
+    bool isAutoRotateEnabled() const { return autoRotateEnabled; }
 
     // Telemetry ingestion
     void processRawWsPacket(const uint8_t *payload, size_t length, int16_t rssi = 0, float snr = 0.0f);
@@ -67,6 +73,7 @@ class WeatherXMModule : public MeshModule, public Observable<const UIFrameEvent 
     uint32_t lastSensorPollMs = 0;
 
     bool useImperial = false;
+    bool autoRotateEnabled = true;
     bool hasOnboardBmp390 = false;
     float onboardPressureHpa = 0.0f;
     float onboardTempC = 0.0f;

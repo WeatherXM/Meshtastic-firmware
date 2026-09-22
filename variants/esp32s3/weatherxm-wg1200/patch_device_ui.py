@@ -32,3 +32,30 @@ for path in glob.glob(pattern):
                 with open(path, "w") as f:
                     f.write(content)
                 print(f"Patched {path} with GFX_DRIVER_INC support")
+
+# Ensure meshtastic-device-ui grants WeatherXMTFTView access to ui_set_active
+tft_header_pattern = os.path.join(
+    libdeps_dir,
+    "*",
+    "meshtastic-device-ui",
+    "include",
+    "graphics",
+    "view",
+    "TFT",
+    "TFTView_320x240.h",
+)
+
+for path in glob.glob(tft_header_pattern):
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            content = f.read()
+        if "WeatherXMTFTView" not in content:
+            target = "friend class ViewFactory;\n"
+            replacement = (
+                "friend class ViewFactory;\n    friend class WeatherXMTFTView;\n"
+            )
+            if target in content:
+                content = content.replace(target, replacement, 1)
+                with open(path, "w") as f:
+                    f.write(content)
+                print(f"Patched {path} with WeatherXMTFTView friend class")

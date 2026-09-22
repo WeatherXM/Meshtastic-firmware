@@ -1827,7 +1827,7 @@ void TFTDisplay::display(bool fromBlank)
 #endif
         }
 
-#if !defined(USE_ARDUINO_GFX)
+#if !defined(USE_ARDUINO_GFX) && !defined(RAK14014) && !defined(ST7735_CS)
         tft->display(0, 0, displayWidth, displayHeight);
 #endif
 
@@ -2007,7 +2007,7 @@ void TFTDisplay::display(bool fromBlank)
     // Copy the Buffer to the Back Buffer
     if (somethingChanged) {
         memcpy(buffer_back, buffer, displayBufferSize);
-#if !defined(USE_ARDUINO_GFX)
+#if !defined(USE_ARDUINO_GFX) && !defined(RAK14014) && !defined(ST7735_CS)
         tft->display(0, 0, displayWidth, displayHeight);
 #endif
     }
@@ -2321,7 +2321,7 @@ bool TFTDisplay::connect()
     tft->setRotation(3); // Orient horizontal and wide underneath the silkscreen name label
 #endif
     tft->fillScreen(getThemeDefaultOffColor());
-#if !defined(USE_ARDUINO_GFX)
+#if !defined(USE_ARDUINO_GFX) && !defined(RAK14014) && !defined(ST7735_CS)
     tft->display(0, 0, displayWidth, displayHeight);
 #endif
 
