@@ -650,6 +650,14 @@ void setup()
     delay(10);
 #endif
 
+#if defined(SDCARD_CS) && ((SDCARD_CS & 0x40) || (SDCARD_CS >= 64))
+    pinMode(SDCARD_CS, OUTPUT);
+    digitalWrite(SDCARD_CS, HIGH); // Ensure SD CS is held HIGH to isolate shared SPI bus
+#endif
+#if defined(SDCARD_DET) && ((SDCARD_DET & 0x40) || (SDCARD_DET >= 64))
+    pinMode(SDCARD_DET, INPUT);
+#endif
+
 #ifdef SENSECAP_INDICATOR
     // Power the RP2040 co-processor and start the interdevice link before the
     // I2C scan, so that its bus can be probed through the bridge
