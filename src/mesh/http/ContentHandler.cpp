@@ -47,6 +47,9 @@
 using namespace httpsserver;
 
 #include "mesh/http/ContentHandler.h"
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+#include "modules/WeatherXM/WeatherXMModule.h"
+#endif
 
 #define DEST_FS_USES_LITTLEFS
 
@@ -86,6 +89,13 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     ResourceNode *nodeJsonFsBrowseStatic = new ResourceNode("/json/fs/browse/static", "GET", &handleFsBrowseStatic);
     ResourceNode *nodeJsonDelete = new ResourceNode("/json/fs/delete/static", "DELETE", &handleFsDeleteStatic);
 
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+    ResourceNode *nodeWeather = new ResourceNode("/api/v1/weather", "GET", &handleAPIv1Weather);
+    ResourceNode *nodeObservations = new ResourceNode("/api/v1/observations", "GET", &handleAPIv1Weather);
+    ResourceNode *nodeObservation = new ResourceNode("/api/v1/observation", "GET", &handleAPIv1Weather);
+    ResourceNode *nodeWxInfo = new ResourceNode("/api/v1/info", "GET", &handleAPIv1WeatherInfo);
+#endif
+
     ResourceNode *nodeRoot = new ResourceNode("/*", "GET", &handleStatic);
 
     // Secure nodes
@@ -101,6 +111,12 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     secureServer->registerNode(nodeJsonReport);
     secureServer->registerNode(nodeJsonNodes);
     secureServer->registerNode(nodeAdmin);
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+    secureServer->registerNode(nodeWeather);
+    secureServer->registerNode(nodeObservations);
+    secureServer->registerNode(nodeObservation);
+    secureServer->registerNode(nodeWxInfo);
+#endif
     secureServer->registerNode(nodeRoot); // This has to be last
 
     // Insecure nodes
@@ -115,6 +131,12 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     insecureServer->registerNode(nodeJsonDelete);
     insecureServer->registerNode(nodeJsonReport);
     insecureServer->registerNode(nodeAdmin);
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+    insecureServer->registerNode(nodeWeather);
+    insecureServer->registerNode(nodeObservations);
+    insecureServer->registerNode(nodeObservation);
+    insecureServer->registerNode(nodeWxInfo);
+#endif
     insecureServer->registerNode(nodeRoot); // This has to be last
 }
 
@@ -923,4 +945,46 @@ void handleScanNetworks(HTTPRequest *req, HTTPResponse *res)
     out += "],\"status\":\"ok\"}";
     writeAll(res, out);
 }
+
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+void handleAPIv1Weather(HTTPRequest *req, HTTPResponse *res)
+{
+    if (webServerThread)
+        webServerThread->markActivity();
+
+    res->setHeader("Content-Type", "application/json");
+    res->setHeader("Access-Control-Allow-Origin", "*");
+    res->setHeader("Access-Control-Allow-Methods", "GET");
+
+    if (weatherXMModule) {
+        std::string json = weatherXMModule->getData().toJson(weatherXMModule->isImperial());
+        writeAll(res, json);
+    } else {
+        std::string err = "{\"error\":\"WeatherXM module not active\"}";
+        writeAll(res, err);
+    }
+}
+
+void handleAPIv1WeatherInfo(HTTPRequest *req, HTTPResponse *res)
+{
+    if (webServerThread)
+        webServerThread->markActivity();
+
+    res->setHeader("Content-Type", "application/json");
+    res->setHeader("Access-Control-Allow-Origin", "*");
+    res->setHeader("Access-Control-Allow-Methods", "GET");
+
+    char buf[512];
+    snprintf(buf, sizeof(buf),
+             "{\"station_id\":%lu,\"station_type\":\"%s\",\"model\":\"WeatherXM WG1200\","
+             "\"firmware\":\"Meshtastic WG1200\",\"has_bmp390\":%s,\"has_station\":%s}",
+             weatherXMModule ? (unsigned long)weatherXMModule->getData().station_id : 0UL,
+             weatherXMModule ? (weatherXMModule->getData().has_station_data ? "WS1001/WS1300" : "ONBOARD") : "NONE",
+             (weatherXMModule && weatherXMModule->getData().has_bmp390) ? "true" : "false",
+             (weatherXMModule && weatherXMModule->getData().has_station_data) ? "true" : "false");
+
+    std::string out(buf);
+    writeAll(res, out);
+}
+#endif
 #endif

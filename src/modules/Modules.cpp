@@ -122,6 +122,9 @@
 #if defined(HAS_HARDWARE_WATCHDOG)
 #include "watchdog/watchdogThread.h"
 #endif
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+#include "modules/WeatherXM/WeatherXMModule.h"
+#endif
 /**
  * Create module instances here.  If you are adding a new module, you must 'new' it here (or somewhere else)
  */
@@ -288,6 +291,9 @@ void setupModules()
 #endif
 #if defined(HAS_HARDWARE_WATCHDOG)
     watchdogThread = new WatchdogThread();
+#endif
+#if defined(WG1200) || defined(HAS_WEATHERXM)
+    weatherXMModule = new WeatherXMModule();
 #endif
     // Anything dropped into src/modules/optional/. Undefined, so compiled away, unless a module is
     // actually present.

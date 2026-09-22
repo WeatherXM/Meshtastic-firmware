@@ -1565,7 +1565,7 @@ void Screen::setFrames(FrameFocus focus)
                 fsi.positions.waypoint = numframes;
 
             indicatorIcons.push_back(icon_module);
-            PUSH_FRAME_TITLE("Module");
+            PUSH_FRAME_TITLE((m && m->getName()) ? m->getName() : "Module");
             numframes++;
         }
     }
