@@ -1353,17 +1353,140 @@ class PanelInit_ST7701 : public lgfx::Panel_ST7701
 
     const uint8_t *getInitCommands(uint8_t listno) const override
     {
-        // 180 degree hw rotation: vertical flip, horizontal flip
-        static constexpr const uint8_t list1[] = {0x36, 1,   0x10,                         // MADCTL for vertical flip
-                                                  0xFF, 5,   0x77, 0x01, 0x00, 0x00, 0x10, // Command2 BK0 SEL
-                                                  0xC7, 1,   0x04, // SDIR: X-direction Control (Horizontal Flip)
-                                                  0xFF, 5,   0x77, 0x01, 0x00, 0x00, 0x00, // Command2 BK0 DIS
-                                                  0xFF, 0xFF};
+        // Exact 39 commands from WG1200 / SenseCAP Indicator BSP lcd_panel_config.c
+        static constexpr const uint8_t list0[] = {
+            0x11, CMD_INIT_DELAY,
+            120, // Sleep Out
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x10, 0xC0,
+            2,    0x3B,
+            0x00, // 480 lines (LNSET)
+            0xC1, 2,
+            0x0D, 0x02,
+            0xC2, 2,
+            0x31, 0x05,
+            0xC7, 1,
+            0x04, 0xCD,
+            1,    0x08,
+            0xB0, 16,
+            0x00, 0x11,
+            0x18, 0x0E,
+            0x11, 0x06,
+            0x07, 0x08,
+            0x07, 0x22,
+            0x04, 0x12,
+            0x0F, 0xAA,
+            0x31, 0x18,
+            0xB1, 16,
+            0x00, 0x11,
+            0x19, 0x0E,
+            0x12, 0x07,
+            0x08, 0x08,
+            0x08, 0x22,
+            0x04, 0x11,
+            0x11, 0xA9,
+            0x32, 0x18,
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x11, 0xB0,
+            1,    0x60,
+            0xB1, 1,
+            0x32, 0xB2,
+            1,    0x07,
+            0xB3, 1,
+            0x80, 0xB5,
+            1,    0x49,
+            0xB7, 1,
+            0x85, 0xB8,
+            1,    0x21,
+            0xC1, 1,
+            0x78, 0xC2,
+            1,    0x78,
+            0xE0, 3,
+            0x00, 0x1B,
+            0x02, 0xE1,
+            11,   0x08,
+            0xA0, 0x00,
+            0x00, 0x07,
+            0xA0, 0x00,
+            0x00, 0x00,
+            0x44, 0x44,
+            0xE2, 12,
+            0x11, 0x11,
+            0x44, 0x44,
+            0xED, 0xA0,
+            0x00, 0x00,
+            0xEC, 0xA0,
+            0x00, 0x00,
+            0xE3, 4,
+            0x00, 0x00,
+            0x11, 0x11,
+            0xE4, 2,
+            0x44, 0x44,
+            0xE5, 16,
+            0x0A, 0xE9,
+            0xD8, 0xA0,
+            0x0C, 0xEB,
+            0xD8, 0xA0,
+            0x0E, 0xED,
+            0xD8, 0xA0,
+            0x10, 0xEF,
+            0xD8, 0xA0,
+            0xE6, 4,
+            0x00, 0x00,
+            0x11, 0x11,
+            0xE7, 2,
+            0x44, 0x44,
+            0xE8, 16,
+            0x09, 0xE8,
+            0xD8, 0xA0,
+            0x0B, 0xEA,
+            0xD8, 0xA0,
+            0x0D, 0xEC,
+            0xD8, 0xA0,
+            0x0F, 0xEE,
+            0xD8, 0xA0,
+            0xEB, 7,
+            0x02, 0x00,
+            0xE4, 0xE4,
+            0x88, 0x00,
+            0x40, 0xEC,
+            2,    0x3C,
+            0x00, 0xED,
+            16,   0xAB,
+            0x89, 0x76,
+            0x54, 0x02,
+            0xFF, 0xFF,
+            0xFF, 0xFF,
+            0xFF, 0xFF,
+            0x20, 0x45,
+            0x67, 0x98,
+            0xBA, 0x36,
+            1,    0x10,
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x13, 0xE5,
+            1,    0xE4,
+            0xFF, 5,
+            0x77, 0x01,
+            0x00, 0x00,
+            0x00, 0x3A,
+            1,    0x60,
+            0x21, 0, // Display Inversion On
+            0x11, CMD_INIT_DELAY,
+            120,     // Sleep Out
+            0x29, 0, // Display On
+            0xFF, 0xFF,
+        };
         switch (listno) {
-        case 1:
-            return list1;
+        case 0:
+            return list0;
         default:
-            return lgfx::Panel_ST7701::getInitCommands(listno);
+            return nullptr;
         }
     }
 };
@@ -1380,8 +1503,8 @@ class LGFX : public lgfx::LGFX_Device
     {
         {
             auto cfg = _panel_instance.config();
-            cfg.memory_width = 800;
-            cfg.memory_height = 480;
+            cfg.memory_width = TFT_WIDTH;
+            cfg.memory_height = TFT_HEIGHT;
             cfg.panel_width = TFT_WIDTH;
             cfg.panel_height = TFT_HEIGHT;
             cfg.offset_x = TFT_OFFSET_X;
@@ -1391,7 +1514,11 @@ class LGFX : public lgfx::LGFX_Device
 
         {
             auto cfg = _panel_instance.config_detail();
+#if defined(WG1200) || defined(SENSECAP_INDICATOR)
+            cfg.pin_cs = -1;
+#else
             cfg.pin_cs = ST7701_CS;
+#endif
             cfg.pin_sclk = ST7701_SCK;
             cfg.pin_mosi = ST7701_SDA;
             // cfg.use_psram = 1;
@@ -1425,18 +1552,18 @@ class LGFX : public lgfx::LGFX_Device
             cfg.pin_vsync = GPIO_NUM_17;
             cfg.pin_hsync = GPIO_NUM_16;
             cfg.pin_pclk = GPIO_NUM_21;
-            cfg.freq_write = 12000000;
+            cfg.freq_write = 6000000;
 
-            // WeatherXM WG1200 GX panel timings
+            // WeatherXM WG1200 ST7701 panel timings
             cfg.hsync_polarity = 0;
-            cfg.hsync_front_porch = 75;
-            cfg.hsync_pulse_width = 5;
-            cfg.hsync_back_porch = 80;
+            cfg.hsync_front_porch = 10;
+            cfg.hsync_pulse_width = 8;
+            cfg.hsync_back_porch = 50;
 
             cfg.vsync_polarity = 0;
-            cfg.vsync_front_porch = 130;
-            cfg.vsync_pulse_width = 5;
-            cfg.vsync_back_porch = 135;
+            cfg.vsync_front_porch = 10;
+            cfg.vsync_pulse_width = 8;
+            cfg.vsync_back_porch = 20;
 
             cfg.pclk_active_neg = 0;
             cfg.de_idle_high = 1;
@@ -1700,6 +1827,10 @@ void TFTDisplay::display(bool fromBlank)
 #endif
         }
 
+#if !defined(USE_ARDUINO_GFX)
+        tft->display(0, 0, displayWidth, displayHeight);
+#endif
+
         memcpy(buffer_back, buffer, displayBufferSize);
         lastColorFrameSignature = colorFrameSignature;
         haveLastDefaults = true;
@@ -1874,8 +2005,12 @@ void TFTDisplay::display(bool fromBlank)
         y++;
     }
     // Copy the Buffer to the Back Buffer
-    if (somethingChanged)
+    if (somethingChanged) {
         memcpy(buffer_back, buffer, displayBufferSize);
+#if !defined(USE_ARDUINO_GFX)
+        tft->display(0, 0, displayWidth, displayHeight);
+#endif
+    }
 
 #if GRAPHICS_TFT_COLORING_ENABLED
     lastColorFrameSignature = colorFrameSignature;
@@ -2186,6 +2321,9 @@ bool TFTDisplay::connect()
     tft->setRotation(3); // Orient horizontal and wide underneath the silkscreen name label
 #endif
     tft->fillScreen(getThemeDefaultOffColor());
+#if !defined(USE_ARDUINO_GFX)
+    tft->display(0, 0, displayWidth, displayHeight);
+#endif
 
     if (this->linePixelBuffer == NULL) {
 #if defined(CO5300_CS)

@@ -162,18 +162,18 @@ class LGFX_WG1200 : public lgfx::LGFX_Device
             cfg.pin_vsync = GPIO_NUM_17;
             cfg.pin_hsync = GPIO_NUM_16;
             cfg.pin_pclk = GPIO_NUM_21;
-            cfg.freq_write = 12000000;
+            cfg.freq_write = 6000000;
 
-            // WeatherXM WG1200 GX panel timings
+            // WeatherXM WG1200 ST7701 panel timings
             cfg.hsync_polarity = 0;
-            cfg.hsync_front_porch = 75;
-            cfg.hsync_pulse_width = 5;
-            cfg.hsync_back_porch = 80;
+            cfg.hsync_front_porch = 10;
+            cfg.hsync_pulse_width = 8;
+            cfg.hsync_back_porch = 50;
 
             cfg.vsync_polarity = 0;
-            cfg.vsync_front_porch = 130;
-            cfg.vsync_pulse_width = 5;
-            cfg.vsync_back_porch = 135;
+            cfg.vsync_front_porch = 10;
+            cfg.vsync_pulse_width = 8;
+            cfg.vsync_back_porch = 20;
 
             cfg.pclk_active_neg = 0;
             cfg.de_idle_high = 1;
