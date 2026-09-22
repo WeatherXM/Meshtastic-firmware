@@ -74,7 +74,7 @@ def main():
     print(f" Signed Bin  : {signed_bin}")
     print(f" Port        : {upload_port}")
     print(f" Baud        : {upload_speed}")
-    print(f" Target Addr : 0x20000 (factory app partition)")
+    print(" Target Addr : 0x20000 (factory app partition)")
     print("=" * 60 + "\n")
 
     # Step 1: Sign data with Secure Boot V2
@@ -91,7 +91,7 @@ def main():
         signed_bin,
         firmware_bin,
     ]
-    print(f"--> Signing binary with Secure Boot V2...")
+    print("--> Signing binary with Secure Boot V2...")
     res = subprocess.run(sign_cmd)
     if res.returncode != 0:
         print("[ERROR] Signing failed!")
