@@ -117,8 +117,12 @@ bool WsDecoders::decodeWs1001(const uint8_t *pl, size_t len, WeatherData &data, 
 
 bool WsDecoders::decodeWs1300(const uint8_t *pl, size_t len, WeatherData &data, int16_t rssi, float snr)
 {
-    if (!pl || len < 20)
+    if (!pl || len < 15)
         return false;
+
+    if (data.station_name[0] == '\0' || strcmp(data.station_name, "BMP390") == 0) {
+        snprintf(data.station_name, sizeof(data.station_name), "WS1300");
+    }
 
     // Byte offsets for WS1300 sensors
     int16_t temp_raw = (int16_t)(((uint16_t)pl[0] << 8) | pl[1]);

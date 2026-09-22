@@ -82,9 +82,10 @@ void WeatherXMModule::processRawWsPacket(const uint8_t *payload, size_t length, 
         return;
 
     bool decoded = false;
-    if (length == 16) {
+    if (length >= 26 || (length >= 16 && payload[0] <= length)) {
         decoded = weatherxm::WsDecoders::decodeWs1001(payload, length, currentData, rssi, snr);
-    } else if (length == 18) {
+    }
+    if (!decoded && length >= 15) {
         decoded = weatherxm::WsDecoders::decodeWs1300(payload, length, currentData, rssi, snr);
     }
 

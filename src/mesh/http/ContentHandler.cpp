@@ -96,6 +96,8 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     ResourceNode *nodeObservation = new ResourceNode("/api/v1/observation", "GET", &handleAPIv1Weather);
     ResourceNode *nodeWxInfo = new ResourceNode("/api/v1/info", "GET", &handleAPIv1WeatherInfo);
     ResourceNode *nodeWeatherUi = new ResourceNode("/weather", "GET", &handleWeatherDashboard);
+    ResourceNode *nodeWxInject = new ResourceNode("/api/v1/weather/inject", "POST", &handleAPIv1WeatherInject);
+    ResourceNode *nodeWxInjectOptions = new ResourceNode("/api/v1/weather/inject", "OPTIONS", &handleAPIv1WeatherInject);
 #endif
 
     ResourceNode *nodeRoot = new ResourceNode("/*", "GET", &handleStatic);
@@ -119,6 +121,8 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     secureServer->registerNode(nodeObservation);
     secureServer->registerNode(nodeWxInfo);
     secureServer->registerNode(nodeWeatherUi);
+    secureServer->registerNode(nodeWxInject);
+    secureServer->registerNode(nodeWxInjectOptions);
 #endif
     secureServer->registerNode(nodeRoot); // This has to be last
 
@@ -140,6 +144,8 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     insecureServer->registerNode(nodeObservation);
     insecureServer->registerNode(nodeWxInfo);
     insecureServer->registerNode(nodeWeatherUi);
+    insecureServer->registerNode(nodeWxInject);
+    insecureServer->registerNode(nodeWxInjectOptions);
 #endif
     insecureServer->registerNode(nodeRoot); // This has to be last
 }
@@ -1008,6 +1014,70 @@ void handleWeatherDashboard(HTTPRequest *req, HTTPResponse *res)
     res->setHeader("Access-Control-Allow-Methods", "GET");
 
     res->print(WEATHER_DASHBOARD_HTML);
+}
+
+void handleAPIv1WeatherInject(HTTPRequest *req, HTTPResponse *res)
+{
+    if (webServerThread)
+        webServerThread->markActivity();
+
+    res->setHeader("Content-Type", "application/json");
+    res->setHeader("Access-Control-Allow-Origin", "*");
+    res->setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+
+    if (req->getMethod() == "OPTIONS") {
+        res->setStatusCode(204);
+        return;
+    }
+
+    if (!weatherXMModule) {
+        res->setStatusCode(503);
+        res->print("{\"error\":\"WeatherXM module not active\"}");
+        return;
+    }
+
+    char buffer[256];
+    size_t s = req->readBytes(reinterpret_cast<byte *>(buffer), sizeof(buffer) - 1);
+    buffer[s] = '\0';
+
+    std::string body(buffer, s);
+    std::string hexStr;
+    size_t pos = body.find("\"hex\":");
+    if (pos != std::string::npos) {
+        size_t start = body.find("\"", pos + 6);
+        if (start != std::string::npos) {
+            size_t end = body.find("\"", start + 1);
+            if (end != std::string::npos) {
+                hexStr = body.substr(start + 1, end - start - 1);
+            }
+        }
+    } else {
+        hexStr = body;
+        while (!hexStr.empty() && (hexStr.front() == ' ' || hexStr.front() == '\r' || hexStr.front() == '\n'))
+            hexStr.erase(0, 1);
+        while (!hexStr.empty() && (hexStr.back() == ' ' || hexStr.back() == '\r' || hexStr.back() == '\n'))
+            hexStr.pop_back();
+    }
+
+    std::vector<uint8_t> bytes;
+    for (size_t i = 0; i + 1 < hexStr.size(); i += 2) {
+        char byteChars[3] = {hexStr[i], hexStr[i + 1], 0};
+        char *endptr = nullptr;
+        unsigned long val = strtoul(byteChars, &endptr, 16);
+        if (endptr && *endptr == 0) {
+            bytes.push_back((uint8_t)val);
+        }
+    }
+
+    if (bytes.size() >= 14) {
+        weatherXMModule->processRawWsPacket(bytes.data(), bytes.size(), -75, 9.5f);
+        res->print("{\"status\":\"ok\",\"bytes_decoded\":");
+        res->print(httpsserver::intToString(bytes.size()).c_str());
+        res->print("}");
+    } else {
+        res->setStatusCode(400);
+        res->print("{\"error\":\"Invalid WS packet. Minimum 14 bytes required\"}");
+    }
 }
 #endif
 #endif
