@@ -59,6 +59,7 @@
 #include "modules/StoreForwardModule.h"
 #include <Preferences.h>
 #include <nvs_flash.h>
+#include <nvs.h>
 #endif
 
 #ifdef ARCH_PORTDUINO
@@ -947,8 +948,29 @@ bool NodeDB::factoryReset(bool eraseBleBonds)
     if (eraseBleBonds) {
         LOG_INFO("Erase BLE bonds");
 #ifdef ARCH_ESP32
+#if defined(WG1200)
+        // Dual-boot safe: On WeatherXM WG1200, NVS contains station cryptographic keys,
+        // certificates, and factory calibration. Do NOT erase the entire flash partition!
+        // Instead, delete only Meshtastic, BLE, and WiFi namespaces.
+        LOG_INFO("Preserving WeatherXM NVS: selectively erasing Meshtastic namespaces");
+        Preferences preferences;
+        if (preferences.begin("meshtastic", false)) {
+            preferences.clear();
+            preferences.end();
+        }
+        const char *meshtastic_nvs_namespaces[] = {"nimble_bond", "nimble_sec", "nvs.net80211", NULL};
+        for (int i = 0; meshtastic_nvs_namespaces[i] != NULL; i++) {
+            nvs_handle_t handle = 0;
+            if (nvs_open(meshtastic_nvs_namespaces[i], NVS_READWRITE, &handle) == ESP_OK) {
+                nvs_erase_all(handle);
+                nvs_commit(handle);
+                nvs_close(handle);
+            }
+        }
+#else
         // This will erase what's in NVS including ssl keys, persistent variables and ble pairing
         nvs_flash_erase();
+#endif
 #endif
 
 #ifdef ARCH_NRF52

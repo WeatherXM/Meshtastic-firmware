@@ -10,6 +10,86 @@
         "isDefault": true
       },
       "label": "PlatformIO: Build"
+    },
+    {
+      "type": "PlatformIO",
+      "task": "Upload",
+      "problemMatcher": ["$platformio"],
+      "label": "PlatformIO: Upload"
+    },
+    {
+      "type": "process",
+      "command": "pio",
+      "args": ["run", "-e", "weatherxm-wg1200"],
+      "problemMatcher": ["$platformio"],
+      "group": "build",
+      "label": "WG1200: Build Firmware"
+    },
+    {
+      "type": "process",
+      "command": "pio",
+      "args": ["run", "-e", "weatherxm-wg1200", "-t", "upload"],
+      "problemMatcher": ["$platformio"],
+      "group": "build",
+      "label": "WG1200: Safe Flash & Switch (USB)"
+    },
+    {
+      "type": "shell",
+      "command": "python",
+      "args": ["variants/esp32s3/weatherxm-wg1200/wg1200_upload.py", "--status"],
+      "options": {
+        "env": {
+          "PYTHONIOENCODING": "utf-8",
+          "PYTHONUTF8": "1"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "label": "WG1200: Check Partition & Boot Status"
+    },
+    {
+      "type": "shell",
+      "command": "python",
+      "args": ["variants/esp32s3/weatherxm-wg1200/wg1200_upload.py", "--backup"],
+      "options": {
+        "env": {
+          "PYTHONIOENCODING": "utf-8",
+          "PYTHONUTF8": "1"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "label": "WG1200: Full 16MB Backup & Validate"
+    },
+    {
+      "type": "shell",
+      "command": "python",
+      "args": ["variants/esp32s3/weatherxm-wg1200/wg1200_upload.py", "--rollback"],
+      "options": {
+        "env": {
+          "PYTHONIOENCODING": "utf-8",
+          "PYTHONUTF8": "1"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "label": "WG1200: Factory Rollback to WeatherXM"
+    },
+    {
+      "type": "process",
+      "command": "pio",
+      "args": ["device", "monitor", "-e", "weatherxm-wg1200", "-b", "115200"],
+      "problemMatcher": [],
+      "label": "WG1200: Monitor Serial Output"
     }
   ]
 }

@@ -18,6 +18,7 @@ bool BMP3XXSensor::initDevice(TwoWire *bus, ScanI2C::FoundDevice *dev)
     if (!status) {
         return status;
     }
+    bmp3xx->is_initialized = true;
 
     // set up oversampling and filter initialization
     bmp3xx->setTemperatureOversampling(BMP3_OVERSAMPLING_4X);
@@ -75,6 +76,9 @@ BMP3XXSingleton *BMP3XXSingleton::pinstance{nullptr};
 
 bool BMP3XXSingleton::performReading()
 {
+    if (!is_initialized) {
+        return false;
+    }
     bool result = Adafruit_BMP3XX::performReading();
     if (result) {
         double atmospheric = this->pressure / 100.0;

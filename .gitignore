@@ -75,3 +75,9 @@ build/wasm/
 build/wasm-obj/
 build/wasm-*.log
 .emsdk/
+
+# WeatherXM WG1200 backup archives and flash dumps
+backups/
+*.bin
+!bin/wio_tracker_bootloader_update.bin
+

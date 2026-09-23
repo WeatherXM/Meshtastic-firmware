@@ -383,7 +383,11 @@ bool AdminModule::handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshta
         break;
     }
     case meshtastic_AdminMessage_ota_request_tag: {
-#if defined(ARCH_ESP32) && !MESHTASTIC_EXCLUDE_WIFI
+#if defined(WG1200)
+        suppressRebootBanner = true;
+        sendWarningAndLog("OTA disabled on WG1200: Device uses hardware Secure Boot V2 and dual-slot protection. Use wg1200_upload.py to flash pre-signed firmware.");
+        break;
+#elif defined(ARCH_ESP32) && !MESHTASTIC_EXCLUDE_WIFI
         LOG_INFO("OTA Requested");
 
         if (r->ota_request.ota_hash.size != 32) {

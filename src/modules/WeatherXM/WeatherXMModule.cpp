@@ -127,7 +127,7 @@ void WeatherXMModule::updateOnboardSensors()
 {
 #if !MESHTASTIC_EXCLUDE_ENVIRONMENTAL_SENSOR && __has_include(<Adafruit_BMP3XX.h>)
     BMP3XXSingleton *bmp = BMP3XXSingleton::GetInstance();
-    if (bmp && bmp->performReading()) {
+    if (bmp && bmp->is_initialized && bmp->performReading()) {
         float press_hpa = bmp->pressure / 100.0f;
         float temp_c = bmp->temperature;
 

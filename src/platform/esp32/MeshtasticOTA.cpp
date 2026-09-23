@@ -66,7 +66,13 @@ void saveConfig(meshtastic_Config_NetworkConfig *network, meshtastic_OTAMode met
 
 const esp_partition_t *getAppPartition()
 {
+#if defined(WG1200)
+    // On WG1200, ota_1 is a secondary Meshtastic firmware partition, NOT a disposable OTA loader.
+    // Return NULL so Meshtastic runtime OTA never misinterprets or overwrites it.
+    return NULL;
+#else
     return esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, NULL);
+#endif
 }
 
 bool getAppDesc(const esp_partition_t *part, esp_app_desc_t *app_desc)
@@ -80,6 +86,10 @@ bool getAppDesc(const esp_partition_t *part, esp_app_desc_t *app_desc)
 
 bool checkOTACapability(const esp_app_desc_t *app_desc, uint8_t method)
 {
+#if defined(WG1200)
+    LOG_WARN("MeshtasticOTA disabled on WG1200 (Secure Boot V2 target)");
+    return false;
+#else
     // Combined loader supports all (both) transports, BLE and WiFi
     if (strcmp(app_desc->project_name, combinedAppProjectName) == 0) {
         LOG_INFO("OTA partition contains combined BLE/WiFi OTA Loader");
@@ -95,10 +105,15 @@ bool checkOTACapability(const esp_app_desc_t *app_desc, uint8_t method)
     }
     LOG_INFO("OTA partition does not contain a known OTA loader");
     return false;
+#endif
 }
 
 bool trySwitchToOTA()
 {
+#if defined(WG1200)
+    LOG_WARN("trySwitchToOTA blocked on WG1200");
+    return false;
+#else
     const esp_partition_t *part = getAppPartition();
 
     if (part == NULL) {
@@ -114,6 +129,7 @@ bool trySwitchToOTA()
     }
 
     return true;
+#endif
 }
 
 const char *getVersion()

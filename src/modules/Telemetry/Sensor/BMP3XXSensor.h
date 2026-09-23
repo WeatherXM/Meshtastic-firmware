@@ -37,6 +37,8 @@ class BMP3XXSingleton : public Adafruit_BMP3XX
 
     // Altitude in metres above mean sea level, assigned after calling performReading()
     double altitudeAmslMetres = 0.0f;
+
+    bool is_initialized = false;
 };
 
 class BMP3XXSensor : public TelemetrySensor
