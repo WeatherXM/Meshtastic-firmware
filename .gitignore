@@ -81,3 +81,13 @@ backups/
 *.bin
 !bin/wio_tracker_bootloader_update.bin
 
+# Cryptographic keys, certificates, and secrets
+*.pem
+*.key
+*.crt
+*.der
+*.p12
+*.pfx
+secrets/
+
+

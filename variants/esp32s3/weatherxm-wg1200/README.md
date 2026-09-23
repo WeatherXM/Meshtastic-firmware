@@ -195,7 +195,7 @@ The companion upload utility `variants/esp32s3/weatherxm-wg1200/wg1200_upload.py
 ### Step 0: Preflight `esp_secure_cert` Verification
 Before every upload, the tool automatically reads the 8 KB certificate partition (`0x00D000`):
 1. Verifies the authentic WeatherXM TLV magic `0xBA5EBA11` (`\x11\xba\x5e\xba`).
-2. Extracts and displays the hardware device serial number (e.g. `CBA1A0B12CF902CAE9BD`).
+2. Extracts and displays the hardware device serial number (e.g. `WXM_SERIAL_123456789`).
 3. Automatically archives a timestamped snapshot to `backups/secure_cert/secure_cert_<SERIAL>_<TIMESTAMP>.bin`.
 4. If the magic is missing or corrupted, the tool warns the developer and prompts for explicit confirmation before proceeding.
 
