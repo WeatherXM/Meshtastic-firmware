@@ -11,14 +11,18 @@
   "[powershell]": {
     "editor.defaultFormatter": "ms-vscode.powershell"
   },
-  "cmake.sourceDirectory": "C:/Workspace/WeatherXM-Deep/weatherxm-meshtastic/Meshtastic-firmware/.dummy",
-  "clangd.path": "C:\\Users\\MN\\.platformio\\packages\\tool-clangd-esp\\bin\\clangd.exe",
+  "cmake.sourceDirectory": "${workspaceFolder}/.dummy",
   "clangd.arguments": [
-    "--compile-commands-dir=c:/Workspace/WeatherXM-Deep/weatherxm-meshtastic/Meshtastic-firmware/.cache/clangd",
-    "--query-driver=C:/Users/MN/.platformio/packages/toolchain-*/bin/*,C:/Users/MN/.platformio/packages/tool-*/bin/*"
+    "--compile-commands-dir=${workspaceFolder}/.cache/clangd",
+    "--query-driver=${userHome}/.platformio/packages/toolchain-*/bin/*,${userHome}/.platformio/packages/tool-*/bin/*"
   ],
-  "platformio-ide.customPATH": "C:\\Users\\MN\\.platformio\\penv\\Scripts;C:\\Users\\MN\\.platformio\\penv",
   "terminal.integrated.env.windows": {
-    "PATH": "C:\\Users\\MN\\.platformio\\penv\\Scripts;C:\\Users\\MN\\.platformio\\penv;${env:PATH}"
+    "PATH": "${userHome}\\.platformio\\penv\\Scripts;${userHome}\\.platformio\\penv;${env:PATH}"
+  },
+  "terminal.integrated.env.osx": {
+    "PATH": "${userHome}/.platformio/penv/bin:${env:PATH}"
+  },
+  "terminal.integrated.env.linux": {
+    "PATH": "${userHome}/.platformio/penv/bin:${env:PATH}"
   }
 }
