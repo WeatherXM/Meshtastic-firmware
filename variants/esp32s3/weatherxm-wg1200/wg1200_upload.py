@@ -39,20 +39,20 @@ RUN_ENV = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 # Standard WG1200 16MB Partition Offsets & Sizes
 EXPECTED_PARTITIONS = {
     "factory": {"offset": 0x020000, "size": 0x400000, "type": 0x00, "subtype": 0x00},
-    "ota_0":   {"offset": 0x420000, "size": 0x400000, "type": 0x00, "subtype": 0x10},
-    "ota_1":   {"offset": 0x820000, "size": 0x400000, "type": 0x00, "subtype": 0x11},
+    "ota_0": {"offset": 0x420000, "size": 0x400000, "type": 0x00, "subtype": 0x10},
+    "ota_1": {"offset": 0x820000, "size": 0x400000, "type": 0x00, "subtype": 0x11},
     "otadata": {"offset": 0x013000, "size": 0x002000, "type": 0x01, "subtype": 0x00},
 }
 
 PARTITION_TABLE_OFFSET = "0xc000"
-PARTITION_TABLE_SIZE   = "0x1000"
-OTADATA_OFFSET          = "0x13000"
-OTADATA_SIZE            = "0x2000"
+PARTITION_TABLE_SIZE = "0x1000"
+OTADATA_OFFSET = "0x13000"
+OTADATA_SIZE = "0x2000"
 
 # esp_secure_cert partition holding irreplaceable factory device credentials
 SECURE_CERT_OFFSET = "0xd000"
-SECURE_CERT_SIZE   = "0x2000"
-TLV_MAGIC          = b"\x11\xba\x5e\xba"  # 0xBA5EBA11, little-endian as stored on flash
+SECURE_CERT_SIZE = "0x2000"
+TLV_MAGIC = b"\x11\xba\x5e\xba"  # 0xBA5EBA11, little-endian as stored on flash
 
 
 def find_signing_key():
@@ -63,22 +63,39 @@ def find_signing_key():
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
-                "..", "..", "..", "..", "..",
-                "WG1400", "wg1200-firmware", "secrets", "wg1200_secure_boot_key.pem",
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "WG1400",
+                "wg1200-firmware",
+                "secrets",
+                "wg1200_secure_boot_key.pem",
             )
         ),
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
-                "..", "..", "..", "..", "..",
-                "WG1400", "secrets", "secure_boot_signing_key.pem",
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "WG1400",
+                "secrets",
+                "secure_boot_signing_key.pem",
             )
         ),
         os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "secrets", "wg1200_secure_boot_key.pem")
+            os.path.join(
+                os.path.dirname(__file__), "secrets", "wg1200_secure_boot_key.pem"
+            )
         ),
         os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "secrets", "secure_boot_signing_key.pem")
+            os.path.join(
+                os.path.dirname(__file__), "secrets", "secure_boot_signing_key.pem"
+            )
         ),
         os.path.abspath(
             os.path.join(os.path.dirname(__file__), "wg1200_secure_boot_key.pem")
@@ -131,7 +148,9 @@ def resolve_python_and_tool(tool_name):
 
     # 3. Check tool-esptoolpy package in PlatformIO
     pkg_patterns = glob.glob(
-        os.path.join(home, ".platformio", "packages", "tool-esptoolpy*", f"{tool_name}.py")
+        os.path.join(
+            home, ".platformio", "packages", "tool-esptoolpy*", f"{tool_name}.py"
+        )
     )
     if pkg_patterns:
         py = pio_pythons[0] if os.path.isfile(pio_pythons[0]) else sys.executable
@@ -155,7 +174,11 @@ def find_serial_port():
                 if any(x in desc or x in hwid for x in ["CH340", "1A86", "303A:1001"]):
                     return p.device
             # Filter out virtual bluetooth ports
-            usable = [p for p in ports if "Bluetooth" not in (p.description or "") and "COM1" not in p.device]
+            usable = [
+                p
+                for p in ports
+                if "Bluetooth" not in (p.description or "") and "COM1" not in p.device
+            ]
             if usable:
                 return usable[0].device
             if ports:
@@ -239,8 +262,8 @@ def parse_otadata_sector(sector_bytes):
     """Check validity and sequence of one 4KB otadata sector."""
     if len(sector_bytes) < 32:
         return 0, False
-    seq, = struct.unpack("<I", sector_bytes[0:4])
-    crc, = struct.unpack("<I", sector_bytes[28:32])
+    (seq,) = struct.unpack("<I", sector_bytes[0:4])
+    (crc,) = struct.unpack("<I", sector_bytes[28:32])
     expected_crc = binascii.crc32(struct.pack("<I", seq), 0xFFFFFFFF) % (1 << 32)
     is_valid = (seq != 0xFFFFFFFF) and (seq > 0) and (crc == expected_crc)
     return seq, is_valid
@@ -306,15 +329,15 @@ def build_updated_otadata(existing_otadata, next_seq, target_sec):
     if len(existing_otadata) >= 8192:
         new_data = bytearray(existing_otadata[:8192])
     else:
-        new_data = bytearray(b"\xFF" * 8192)
+        new_data = bytearray(b"\xff" * 8192)
 
-    entry = bytearray(b"\xFF" * 32)
+    entry = bytearray(b"\xff" * 32)
     struct.pack_into("<I", entry, 0, next_seq)
     crc = binascii.crc32(struct.pack("<I", next_seq), 0xFFFFFFFF) % (1 << 32)
     struct.pack_into("<I", entry, 28, crc)
 
     sec_offset = 0 if target_sec == 0 else 4096
-    new_data[sec_offset : sec_offset + 4096] = b"\xFF" * 4096
+    new_data[sec_offset : sec_offset + 4096] = b"\xff" * 4096
     new_data[sec_offset : sec_offset + 32] = entry
     return bytes(new_data)
 
@@ -326,19 +349,28 @@ def read_device_flash(esptool_cmd, port, speed, offset, size):
 
     try:
         cmd = esptool_cmd + [
-            "--chip", "esp32s3",
-            "-b", str(speed),
-            "--port", str(port),
-            "--before", "default_reset",
-            "--after", "no_reset",
+            "--chip",
+            "esp32s3",
+            "-b",
+            str(speed),
+            "--port",
+            str(port),
+            "--before",
+            "default_reset",
+            "--after",
+            "no_reset",
             "read_flash",
             str(offset),
             str(size),
             tmp_name,
         ]
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=RUN_ENV)
+        res = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=RUN_ENV
+        )
         if res.returncode != 0:
-            print(f"[ERROR] Flash read failed at {offset}:\n{res.stderr.decode('utf-8', errors='ignore')}")
+            print(
+                f"[ERROR] Flash read failed at {offset}:\n{res.stderr.decode('utf-8', errors='ignore')}"
+            )
             return None
         with open(tmp_name, "rb") as f:
             return f.read()
@@ -362,6 +394,7 @@ def derive_device_label(cert_bytes):
             try:
                 from cryptography import x509
                 from cryptography.x509.oid import NameOID
+
                 cert = x509.load_pem_x509_certificate(pem)
                 cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
                 if cn and cn[0].value:
@@ -371,7 +404,9 @@ def derive_device_label(cert_bytes):
     return None
 
 
-def validate_and_backup_secure_cert(esptool_cmd, port, speed, backup_dir="backups/secure_cert"):
+def validate_and_backup_secure_cert(
+    esptool_cmd, port, speed, backup_dir="backups/secure_cert"
+):
     """
     Preflight check:
     Reads the 0xD000 / 0x2000 esp_secure_cert region and validates TLV magic (0xBA5EBA11).
@@ -381,7 +416,9 @@ def validate_and_backup_secure_cert(esptool_cmd, port, speed, backup_dir="backup
     os.makedirs(backup_dir, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    data = read_device_flash(esptool_cmd, port, speed, SECURE_CERT_OFFSET, SECURE_CERT_SIZE)
+    data = read_device_flash(
+        esptool_cmd, port, speed, SECURE_CERT_OFFSET, SECURE_CERT_SIZE
+    )
     if not data:
         return False, None, None
 
@@ -414,7 +451,9 @@ def validate_full_backup(backup_file):
 
     size = os.path.getsize(backup_file)
     if size < 0x1000000:
-        report.append(f"[ERROR] Backup size ({size} bytes) is less than 16MB (16777216 bytes).")
+        report.append(
+            f"[ERROR] Backup size ({size} bytes) is less than 16MB (16777216 bytes)."
+        )
         return False, report
     report.append(f"[OK] File size verified: {size} bytes (16MB).")
 
@@ -422,7 +461,9 @@ def validate_full_backup(backup_file):
         # 1. Bootloader Header Check
         boot_header = f.read(4)
         if len(boot_header) >= 1 and boot_header[0] == 0xE9:
-            report.append("[OK] Offset 0x0000: Valid ESP32 bootloader header magic (0xE9).")
+            report.append(
+                "[OK] Offset 0x0000: Valid ESP32 bootloader header magic (0xE9)."
+            )
         else:
             report.append("[WARN] Offset 0x0000: Bootloader magic byte 0xE9 not found.")
 
@@ -434,7 +475,9 @@ def validate_full_backup(backup_file):
             partitions = parse_partition_table(pt_bytes)
             valid, errs = verify_wg1200_partitions(partitions)
             if valid:
-                report.append("[OK] Partition table layout verified (factory, ota_0, ota_1, otadata present).")
+                report.append(
+                    "[OK] Partition table layout verified (factory, ota_0, ota_1, otadata present)."
+                )
             else:
                 for e in errs:
                     report.append(f"[WARN] Partition table warning: {e}")
@@ -447,11 +490,15 @@ def validate_full_backup(backup_file):
         if TLV_MAGIC in cert_bytes:
             label = derive_device_label(cert_bytes)
             lbl_str = f" [Device Serial: {label}]" if label else ""
-            report.append(f"[OK] Offset 0xD000: esp_secure_cert verified (TLV magic 0xBA5EBA11 present{lbl_str}).")
+            report.append(
+                f"[OK] Offset 0xD000: esp_secure_cert verified (TLV magic 0xBA5EBA11 present{lbl_str})."
+            )
         elif all(b == 0xFF for b in cert_bytes):
             report.append("[WARN] Offset 0xD000: esp_secure_cert is blank (all 0xFF).")
         else:
-            report.append("[WARN] Offset 0xD000: esp_secure_cert TLV magic (0xBA5EBA11) NOT found.")
+            report.append(
+                "[WARN] Offset 0xD000: esp_secure_cert TLV magic (0xBA5EBA11) NOT found."
+            )
 
     return True, report
 
@@ -479,11 +526,16 @@ def cmd_backup(port, speed, output_file=None):
 
     print("\n--> Reading entire 16MB (0x1000000) flash from device...")
     cmd = esptool_cmd + [
-        "--chip", "esp32s3",
-        "-b", str(speed),
-        "--port", str(port),
-        "--before", "default_reset",
-        "--after", "hard_reset",
+        "--chip",
+        "esp32s3",
+        "-b",
+        str(speed),
+        "--port",
+        str(port),
+        "--before",
+        "default_reset",
+        "--after",
+        "hard_reset",
         "read_flash",
         "0x0",
         "0x1000000",
@@ -519,13 +571,21 @@ def cmd_erase(port, speed, force=False):
     print(f" Port : {port} | Baud: {speed}")
     print("=" * 65)
 
-    print("\n--> [MANDATORY PRECONDITION] Backing up and validating esp_secure_cert (0xD000)...")
-    valid, cert_data, backup_file = validate_and_backup_secure_cert(esptool_cmd, port, speed)
+    print(
+        "\n--> [MANDATORY PRECONDITION] Backing up and validating esp_secure_cert (0xD000)..."
+    )
+    valid, cert_data, backup_file = validate_and_backup_secure_cert(
+        esptool_cmd, port, speed
+    )
     if not valid:
         print("\n" + "!" * 65)
         print("[FATAL] Refusing to erase flash:")
-        print("esp_secure_cert at 0xD000 is either missing or does not contain TLV magic (0xBA5EBA11).")
-        print("Erasing flash would permanently destroy irreplaceable device factory credentials!")
+        print(
+            "esp_secure_cert at 0xD000 is either missing or does not contain TLV magic (0xBA5EBA11)."
+        )
+        print(
+            "Erasing flash would permanently destroy irreplaceable device factory credentials!"
+        )
         print("!" * 65 + "\n")
         sys.exit(1)
 
@@ -534,7 +594,9 @@ def cmd_erase(port, speed, force=False):
 
     if not force:
         print("\nWARNING: You are about to ERASE ENTIRE FLASH on ESP32-S3.")
-        print("Factory firmware and partitions will be erased. Only bootloader/eFuses remain.")
+        print(
+            "Factory firmware and partitions will be erased. Only bootloader/eFuses remain."
+        )
         ans = input("Type 'ERASE' to confirm: ").strip()
         if ans != "ERASE":
             print("Erase cancelled by user.")
@@ -542,11 +604,16 @@ def cmd_erase(port, speed, force=False):
 
     print("\n--> Erasing entire flash (esptool erase_flash)...")
     cmd = esptool_cmd + [
-        "--chip", "esp32s3",
-        "-b", str(speed),
-        "--port", str(port),
-        "--before", "default_reset",
-        "--after", "hard_reset",
+        "--chip",
+        "esp32s3",
+        "-b",
+        str(speed),
+        "--port",
+        str(port),
+        "--before",
+        "default_reset",
+        "--after",
+        "hard_reset",
         "erase_flash",
     ]
     res = subprocess.run(cmd, env=RUN_ENV)
@@ -569,19 +636,27 @@ def cmd_restore_cert(port, speed, cert_file):
         data = f.read()
 
     if TLV_MAGIC not in data:
-        print(f"[ERROR] Specified file {cert_file} does not contain valid TLV magic (0xBA5EBA11)!")
+        print(
+            f"[ERROR] Specified file {cert_file} does not contain valid TLV magic (0xBA5EBA11)!"
+        )
         sys.exit(1)
 
     print(f"\n--> Restoring esp_secure_cert ({SECURE_CERT_OFFSET}) from {cert_file}...")
     cmd = esptool_cmd + [
-        "--chip", "esp32s3",
-        "-b", str(speed),
-        "--port", str(port),
-        "--before", "default_reset",
-        "--after", "hard_reset",
+        "--chip",
+        "esp32s3",
+        "-b",
+        str(speed),
+        "--port",
+        str(port),
+        "--before",
+        "default_reset",
+        "--after",
+        "hard_reset",
         "write_flash",
         "-z",
-        SECURE_CERT_OFFSET, cert_file,
+        SECURE_CERT_OFFSET,
+        cert_file,
     ]
     res = subprocess.run(cmd, env=RUN_ENV)
     if res.returncode != 0:
@@ -599,19 +674,25 @@ def cmd_status(port, speed):
     print("=" * 65)
 
     print("\n--> Inspecting esp_secure_cert partition (0xd000)...")
-    cert_data = read_device_flash(esptool_cmd, port, speed, SECURE_CERT_OFFSET, SECURE_CERT_SIZE)
+    cert_data = read_device_flash(
+        esptool_cmd, port, speed, SECURE_CERT_OFFSET, SECURE_CERT_SIZE
+    )
     if cert_data:
         if TLV_MAGIC in cert_data:
             label = derive_device_label(cert_data)
             lbl_str = f" (Device Serial: {label})" if label else ""
-            print(f"[OK] esp_secure_cert validated: TLV magic 0xBA5EBA11 found{lbl_str}.")
+            print(
+                f"[OK] esp_secure_cert validated: TLV magic 0xBA5EBA11 found{lbl_str}."
+            )
         elif all(b == 0xFF for b in cert_data):
             print("[WARN] esp_secure_cert is blank (all 0xFF).")
         else:
             print("[WARN] esp_secure_cert does not contain TLV magic (0xBA5EBA11).")
 
     print("\n--> Reading partition table from device (0xc000)...")
-    pt_bytes = read_device_flash(esptool_cmd, port, speed, PARTITION_TABLE_OFFSET, PARTITION_TABLE_SIZE)
+    pt_bytes = read_device_flash(
+        esptool_cmd, port, speed, PARTITION_TABLE_OFFSET, PARTITION_TABLE_SIZE
+    )
     if not pt_bytes:
         print("[ERROR] Could not read partition table. Check serial connection.")
         sys.exit(1)
@@ -619,7 +700,9 @@ def cmd_status(port, speed):
     partitions = parse_partition_table(pt_bytes)
     print("Detected partitions:")
     for name, p in partitions.items():
-        print(f"  - {name:<16} offset=0x{p['offset']:06X} size=0x{p['size']:06X} (type=0x{p['type']:02X}, subtype=0x{p['subtype']:02X})")
+        print(
+            f"  - {name:<16} offset=0x{p['offset']:06X} size=0x{p['size']:06X} (type=0x{p['type']:02X}, subtype=0x{p['subtype']:02X})"
+        )
 
     valid, errors = verify_wg1200_partitions(partitions)
     if not valid:
@@ -630,7 +713,9 @@ def cmd_status(port, speed):
         print("\n[OK] Partition table conforms to standard WG1200 layout.")
 
     print("\n--> Reading otadata partition (0x13000)...")
-    ota_bytes = read_device_flash(esptool_cmd, port, speed, OTADATA_OFFSET, OTADATA_SIZE)
+    ota_bytes = read_device_flash(
+        esptool_cmd, port, speed, OTADATA_OFFSET, OTADATA_SIZE
+    )
     if not ota_bytes:
         print("[ERROR] Could not read otadata partition.")
         sys.exit(1)
@@ -641,12 +726,18 @@ def cmd_status(port, speed):
     )
 
     print(f"\nBoot Status Summary:")
-    print(f"  * Currently Active Slot : {active_slot} (seq={active_seq}, sector={active_sec})")
+    print(
+        f"  * Currently Active Slot : {active_slot} (seq={active_seq}, sector={active_sec})"
+    )
     if active_slot == "factory":
         print(f"    -> Running original WeatherXM Factory firmware at 0x020000")
     else:
-        print(f"    -> Running firmware at offset 0x{EXPECTED_PARTITIONS[active_slot]['offset']:06X}")
-    print(f"  * Inactive / Next Slot  : {target_slot} (offset=0x{target_offset:06X}, next_seq={next_seq})")
+        print(
+            f"    -> Running firmware at offset 0x{EXPECTED_PARTITIONS[active_slot]['offset']:06X}"
+        )
+    print(
+        f"  * Inactive / Next Slot  : {target_slot} (offset=0x{target_offset:06X}, next_seq={next_seq})"
+    )
     print("=" * 65 + "\n")
 
 
@@ -660,20 +751,28 @@ def cmd_rollback(port, speed):
     print("=" * 65)
 
     with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as tmp:
-        tmp.write(b"\xFF" * 8192)
+        tmp.write(b"\xff" * 8192)
         blank_otadata = tmp.name
 
     try:
-        print("\n--> Resetting otadata partition to 0xFF (clearing OTA boot pointers)...")
+        print(
+            "\n--> Resetting otadata partition to 0xFF (clearing OTA boot pointers)..."
+        )
         flash_cmd = esptool_cmd + [
-            "--chip", "esp32s3",
-            "-b", str(speed),
-            "--port", str(port),
-            "--before", "default_reset",
-            "--after", "hard_reset",
+            "--chip",
+            "esp32s3",
+            "-b",
+            str(speed),
+            "--port",
+            str(port),
+            "--before",
+            "default_reset",
+            "--after",
+            "hard_reset",
             "write_flash",
             "-z",
-            OTADATA_OFFSET, blank_otadata,
+            OTADATA_OFFSET,
+            blank_otadata,
         ]
         res = subprocess.run(flash_cmd, env=RUN_ENV)
         if res.returncode != 0:
@@ -711,21 +810,31 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
     print("=" * 65)
 
     # Step 0: Preflight Protection - esp_secure_cert validation
-    print("\n--> Step 0: Preflight check - validating esp_secure_cert (0xD000/0x2000)...")
+    print(
+        "\n--> Step 0: Preflight check - validating esp_secure_cert (0xD000/0x2000)..."
+    )
     valid_cert, cert_data, cert_backup = validate_and_backup_secure_cert(
         esptool_cmd, upload_port, upload_speed
     )
     if valid_cert:
         label = derive_device_label(cert_data)
         lbl_str = f" [Device Serial: {label}]" if label else ""
-        print(f"[OK] Preflight verified: esp_secure_cert contains valid TLV magic (0xBA5EBA11){lbl_str}.")
+        print(
+            f"[OK] Preflight verified: esp_secure_cert contains valid TLV magic (0xBA5EBA11){lbl_str}."
+        )
         print(f"--> Snapshot saved -> {cert_backup}")
     elif cert_data and all(b == 0xFF for b in cert_data):
-        print("[WARN] esp_secure_cert partition is blank (all 0xFF). Device has no factory certificates.")
+        print(
+            "[WARN] esp_secure_cert partition is blank (all 0xFF). Device has no factory certificates."
+        )
     else:
-        print("[WARN] esp_secure_cert partition does not contain TLV magic (0xBA5EBA11).")
+        print(
+            "[WARN] esp_secure_cert partition does not contain TLV magic (0xBA5EBA11)."
+        )
 
-    print("[TIP] For engineering devices, create a validated 16MB backup anytime using:")
+    print(
+        "[TIP] For engineering devices, create a validated 16MB backup anytime using:"
+    )
     print("      python variants/esp32s3/weatherxm-wg1200/wg1200_upload.py --backup")
 
     # Step 1: Secure Boot V2 Signing
@@ -735,9 +844,12 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
         signed_bin = os.path.splitext(firmware_bin)[0] + "_signed.bin"
         sign_cmd = espsecure_cmd + [
             "sign_data",
-            "--version", "2",
-            "--keyfile", signing_key,
-            "--output", signed_bin,
+            "--version",
+            "2",
+            "--keyfile",
+            signing_key,
+            "--output",
+            signed_bin,
             firmware_bin,
         ]
         res = subprocess.run(sign_cmd, capture_output=True, text=True, env=RUN_ENV)
@@ -747,8 +859,10 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
 
         verify_cmd = espsecure_cmd + [
             "verify_signature",
-            "--version", "2",
-            "--keyfile", signing_key,
+            "--version",
+            "2",
+            "--keyfile",
+            signing_key,
             signed_bin,
         ]
         res = subprocess.run(verify_cmd, capture_output=True, text=True, env=RUN_ENV)
@@ -759,11 +873,19 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
         target_bin_to_flash = signed_bin
     else:
         print("\n[WARN] Secure Boot V2 signing key not found.")
-        print("Proceeding with unsigned binary (will fail on production units with Secure Boot burned).")
+        print(
+            "Proceeding with unsigned binary (will fail on production units with Secure Boot burned)."
+        )
 
     # Step 2: Read & Validate Partition Table
     print("\n--> Reading and verifying device partition table...")
-    pt_bytes = read_device_flash(esptool_cmd, upload_port, upload_speed, PARTITION_TABLE_OFFSET, PARTITION_TABLE_SIZE)
+    pt_bytes = read_device_flash(
+        esptool_cmd,
+        upload_port,
+        upload_speed,
+        PARTITION_TABLE_OFFSET,
+        PARTITION_TABLE_SIZE,
+    )
     if not pt_bytes:
         print("[ERROR] Failed to read partition table from device.")
         sys.exit(1)
@@ -776,11 +898,15 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
             print(f"  - {err}")
         print("Aborting upload to protect device flash integrity.")
         sys.exit(1)
-    print("--> Partition table verified (factory=0x20000, ota_0=0x420000, ota_1=0x820000).")
+    print(
+        "--> Partition table verified (factory=0x20000, ota_0=0x420000, ota_1=0x820000)."
+    )
 
     # Step 3: Read otadata & Determine Target Slot
     print("\n--> Reading otadata partition to identify inactive slot...")
-    ota_bytes = read_device_flash(esptool_cmd, upload_port, upload_speed, OTADATA_OFFSET, OTADATA_SIZE)
+    ota_bytes = read_device_flash(
+        esptool_cmd, upload_port, upload_speed, OTADATA_OFFSET, OTADATA_SIZE
+    )
     if not ota_bytes:
         print("[ERROR] Failed to read otadata partition from device.")
         sys.exit(1)
@@ -791,7 +917,9 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
     )
 
     print(f"--> Current Active Slot : {active_slot} (seq={active_seq})")
-    print(f"--> Target Inactive Slot: {target_slot} (offset=0x{target_offset:06X}, new seq={next_seq})")
+    print(
+        f"--> Target Inactive Slot: {target_slot} (offset=0x{target_offset:06X}, new seq={next_seq})"
+    )
     print(f"--> Note: 'factory' partition (0x020000) will NOT be touched.")
 
     # Step 4: Construct Updated otadata
@@ -802,21 +930,33 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
 
     try:
         # Step 5: Flash Firmware to Target Slot & Update otadata Atomically
-        print(f"\n--> Flashing {target_bin_to_flash} to {target_slot} (0x{target_offset:06X})")
+        print(
+            f"\n--> Flashing {target_bin_to_flash} to {target_slot} (0x{target_offset:06X})"
+        )
         print(f"--> Updating otadata (0x{OTADATA_OFFSET}) to activate {target_slot}...")
         flash_cmd = esptool_cmd + [
-            "--chip", "esp32s3",
-            "-b", str(upload_speed),
-            "--port", str(upload_port),
-            "--before", "default_reset",
-            "--after", "hard_reset",
+            "--chip",
+            "esp32s3",
+            "-b",
+            str(upload_speed),
+            "--port",
+            str(upload_port),
+            "--before",
+            "default_reset",
+            "--after",
+            "hard_reset",
             "write_flash",
             "-z",
-            "--flash_mode", "dio",
-            "--flash_freq", "80m",
-            "--flash_size", "16MB",
-            f"0x{target_offset:X}", target_bin_to_flash,
-            OTADATA_OFFSET, updated_otadata_path,
+            "--flash_mode",
+            "dio",
+            "--flash_freq",
+            "80m",
+            "--flash_size",
+            "16MB",
+            f"0x{target_offset:X}",
+            target_bin_to_flash,
+            OTADATA_OFFSET,
+            updated_otadata_path,
         ]
         res = subprocess.run(flash_cmd, env=RUN_ENV)
         if res.returncode != 0:
@@ -825,7 +965,9 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
 
         print("\n" + "=" * 65)
         print("[SUCCESS] WG1200 flashed and switched cleanly!")
-        print(f"Active Boot Target is now: {target_slot} (offset 0x{target_offset:06X})")
+        print(
+            f"Active Boot Target is now: {target_slot} (offset 0x{target_offset:06X})"
+        )
         print("Factory WeatherXM firmware remains untouched at 0x020000.")
         print("Hold user button (GPIO 38) for 10s at boot to rollback to WeatherXM.")
         print("=" * 65 + "\n")
@@ -846,7 +988,9 @@ def main():
         return
 
     if "--rollback" in sys.argv or "--factory-rollback" in sys.argv:
-        args = [a for a in sys.argv[1:] if a not in ("--rollback", "--factory-rollback")]
+        args = [
+            a for a in sys.argv[1:] if a not in ("--rollback", "--factory-rollback")
+        ]
         port = args[0] if len(args) > 0 else find_serial_port()
         speed = args[1] if len(args) > 1 else "460800"
         cmd_rollback(port, speed)
@@ -884,12 +1028,24 @@ def main():
     if len(sys.argv) < 2:
         print(f"WeatherXM WG1200 Flasher & Management Tool\n")
         print(f"Usage:")
-        print(f"  Upload firmware : {sys.argv[0]} [upload_port] [upload_speed] <firmware_bin>")
-        print(f"  Inspect status  : {sys.argv[0]} --status [upload_port] [upload_speed]")
-        print(f"  Full 16MB backup: {sys.argv[0]} --backup [upload_port] [upload_speed] [output_file]")
-        print(f"  Restore cert    : {sys.argv[0]} --restore-cert <cert_file> [upload_port] [upload_speed]")
-        print(f"  Safe erase flash: {sys.argv[0]} --erase [upload_port] [upload_speed] [--force]")
-        print(f"  Factory rollback: {sys.argv[0]} --rollback [upload_port] [upload_speed]")
+        print(
+            f"  Upload firmware : {sys.argv[0]} [upload_port] [upload_speed] <firmware_bin>"
+        )
+        print(
+            f"  Inspect status  : {sys.argv[0]} --status [upload_port] [upload_speed]"
+        )
+        print(
+            f"  Full 16MB backup: {sys.argv[0]} --backup [upload_port] [upload_speed] [output_file]"
+        )
+        print(
+            f"  Restore cert    : {sys.argv[0]} --restore-cert <cert_file> [upload_port] [upload_speed]"
+        )
+        print(
+            f"  Safe erase flash: {sys.argv[0]} --erase [upload_port] [upload_speed] [--force]"
+        )
+        print(
+            f"  Factory rollback: {sys.argv[0]} --rollback [upload_port] [upload_speed]"
+        )
         sys.exit(1)
 
     if len(sys.argv) >= 4:
