@@ -840,36 +840,72 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
     # Step 1: Secure Boot V2 Signing
     target_bin_to_flash = firmware_bin
     if signing_key:
-        print("\n--> Signing binary with Secure Boot V2...")
-        signed_bin = os.path.splitext(firmware_bin)[0] + "_signed.bin"
-        sign_cmd = espsecure_cmd + [
-            "sign_data",
-            "--version",
-            "2",
-            "--keyfile",
-            signing_key,
-            "--output",
-            signed_bin,
-            firmware_bin,
-        ]
-        res = subprocess.run(sign_cmd, capture_output=True, text=True, env=RUN_ENV)
-        if res.returncode != 0:
-            print(f"[ERROR] espsecure sign_data failed:\n{res.stdout}\n{res.stderr}")
-            sys.exit(res.returncode)
+        build_dir = os.path.dirname(os.path.abspath(firmware_bin))
+        bin_name = os.path.basename(firmware_bin)
+        clean_base = re.sub(
+            r"(\d+\.\d+\.\d+)\.[0-9a-fA-F]+", r"\1", os.path.splitext(bin_name)[0]
+        )
+        signed_bin = os.path.join(build_dir, f"{clean_base}-signed.bin")
 
-        verify_cmd = espsecure_cmd + [
-            "verify_signature",
-            "--version",
-            "2",
-            "--keyfile",
-            signing_key,
-            signed_bin,
-        ]
-        res = subprocess.run(verify_cmd, capture_output=True, text=True, env=RUN_ENV)
-        if "successful" not in res.stdout and "valid" not in res.stdout:
-            print(f"[ERROR] Signature verification failed:\n{res.stdout}\n{res.stderr}")
-            sys.exit(1)
-        print("--> Signature verified successfully.")
+        need_sign = True
+        if os.path.isfile(signed_bin) and os.path.getmtime(
+            signed_bin
+        ) >= os.path.getmtime(firmware_bin):
+            verify_cmd = espsecure_cmd + [
+                "verify_signature",
+                "--version",
+                "2",
+                "--keyfile",
+                signing_key,
+                signed_bin,
+            ]
+            res = subprocess.run(
+                verify_cmd, capture_output=True, text=True, env=RUN_ENV
+            )
+            if "successful" in res.stdout or "valid" in res.stdout:
+                need_sign = False
+                print(
+                    f"\n--> Using existing signed release binary: {os.path.basename(signed_bin)}"
+                )
+
+        if need_sign:
+            print(
+                f"\n--> Signing binary with Secure Boot V2 -> {os.path.basename(signed_bin)}..."
+            )
+            sign_cmd = espsecure_cmd + [
+                "sign_data",
+                "--version",
+                "2",
+                "--keyfile",
+                signing_key,
+                "--output",
+                signed_bin,
+                firmware_bin,
+            ]
+            res = subprocess.run(sign_cmd, capture_output=True, text=True, env=RUN_ENV)
+            if res.returncode != 0:
+                print(
+                    f"[ERROR] espsecure sign_data failed:\n{res.stdout}\n{res.stderr}"
+                )
+                sys.exit(res.returncode)
+
+            verify_cmd = espsecure_cmd + [
+                "verify_signature",
+                "--version",
+                "2",
+                "--keyfile",
+                signing_key,
+                signed_bin,
+            ]
+            res = subprocess.run(
+                verify_cmd, capture_output=True, text=True, env=RUN_ENV
+            )
+            if "successful" not in res.stdout and "valid" not in res.stdout:
+                print(
+                    f"[ERROR] Signature verification failed:\n{res.stdout}\n{res.stderr}"
+                )
+                sys.exit(1)
+            print("--> Signature verified successfully.")
         target_bin_to_flash = signed_bin
     else:
         print("\n[WARN] Secure Boot V2 signing key not found.")

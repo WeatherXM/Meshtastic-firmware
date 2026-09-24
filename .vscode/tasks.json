@@ -34,9 +34,44 @@
       "label": "WG1200: Safe Flash & Switch (USB)"
     },
     {
+      "type": "process",
+      "command": "pio",
+      "args": ["run", "-e", "weatherxm-wg1200-tft"],
+      "problemMatcher": ["$platformio"],
+      "group": "build",
+      "label": "WG1200 TFT: Build Firmware"
+    },
+    {
+      "type": "process",
+      "command": "pio",
+      "args": ["run", "-e", "weatherxm-wg1200-tft", "-t", "upload"],
+      "problemMatcher": ["$platformio"],
+      "group": "build",
+      "label": "WG1200 TFT: Safe Flash & Switch (USB)"
+    },
+    {
+      "type": "process",
+      "command": "pio",
+      "args": ["run", "-e", "weatherxm-wg1200-standard-ui"],
+      "problemMatcher": ["$platformio"],
+      "group": "build",
+      "label": "WG1200 Standard UI: Build Firmware"
+    },
+    {
+      "type": "process",
+      "command": "pio",
+      "args": ["run", "-e", "weatherxm-wg1200-standard-ui", "-t", "upload"],
+      "problemMatcher": ["$platformio"],
+      "group": "build",
+      "label": "WG1200 Standard UI: Safe Flash & Switch (USB)"
+    },
+    {
       "type": "shell",
       "command": "python",
-      "args": ["variants/esp32s3/weatherxm-wg1200/wg1200_upload.py", "--status"],
+      "args": [
+        "variants/esp32s3/weatherxm-wg1200/wg1200_upload.py",
+        "--status"
+      ],
       "options": {
         "env": {
           "PYTHONIOENCODING": "utf-8",
@@ -53,7 +88,10 @@
     {
       "type": "shell",
       "command": "python",
-      "args": ["variants/esp32s3/weatherxm-wg1200/wg1200_upload.py", "--backup"],
+      "args": [
+        "variants/esp32s3/weatherxm-wg1200/wg1200_upload.py",
+        "--backup"
+      ],
       "options": {
         "env": {
           "PYTHONIOENCODING": "utf-8",
@@ -70,7 +108,10 @@
     {
       "type": "shell",
       "command": "python",
-      "args": ["variants/esp32s3/weatherxm-wg1200/wg1200_upload.py", "--rollback"],
+      "args": [
+        "variants/esp32s3/weatherxm-wg1200/wg1200_upload.py",
+        "--rollback"
+      ],
       "options": {
         "env": {
           "PYTHONIOENCODING": "utf-8",
