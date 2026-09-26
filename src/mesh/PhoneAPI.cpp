@@ -1699,12 +1699,17 @@ bool PhoneAPI::available()
         prefetchNodeInfos();
         return true;
     case STATE_SEND_PACKETS: {
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+        const bool forDisplay = api_type == TYPE_PACKET;
+#else
+        const bool forDisplay = false;
+#endif
         if (!queueStatusPacketForPhone)
-            queueStatusPacketForPhone = service->getQueueStatusForPhone();
-        if (!mqttClientProxyMessageForPhone)
+            queueStatusPacketForPhone = service->getQueueStatusForPhone(forDisplay);
+        if (!forDisplay && !mqttClientProxyMessageForPhone)
             mqttClientProxyMessageForPhone = service->getMqttClientProxyMessageForPhone();
         if (!clientNotification)
-            clientNotification = service->getClientNotificationForPhone();
+            clientNotification = service->getClientNotificationForPhone(forDisplay);
         bool hasPacket = !!queueStatusPacketForPhone || !!mqttClientProxyMessageForPhone || !!clientNotification;
 #ifdef MESHTASTIC_PHONEAPI_ACCESS_CONTROL
         if (hasPendingLockdownStatus())
@@ -1714,7 +1719,7 @@ bool PhoneAPI::available()
             return true;
 
 #ifdef FSCom
-        if (xmodemPacketForPhone.control == meshtastic_XModem_Control_NUL)
+        if (!forDisplay && xmodemPacketForPhone.control == meshtastic_XModem_Control_NUL)
             xmodemPacketForPhone = xModem.getForPhone();
         if (xmodemPacketForPhone.control != meshtastic_XModem_Control_NUL) {
             xModem.resetForPhone();
@@ -1725,13 +1730,13 @@ bool PhoneAPI::available()
 #ifdef ARCH_ESP32
 #if !MESHTASTIC_EXCLUDE_STOREFORWARD
         // Check if StoreForward has packets stored for us.
-        if (!packetForPhone && storeForwardModule)
+        if (!forDisplay && !packetForPhone && storeForwardModule)
             packetForPhone = storeForwardModule->getForPhone();
 #endif
 #endif
 
         if (!packetForPhone)
-            packetForPhone = service->getForPhone();
+            packetForPhone = service->getForPhone(forDisplay);
         hasPacket = !!packetForPhone;
         if (hasPacket)
             return true;

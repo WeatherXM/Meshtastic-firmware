@@ -361,6 +361,9 @@ ErrorCode MeshService::sendQueueStatusToPhone(const meshtastic_QueueStatus &qs, 
     copied->res = res;
     copied->mesh_packet_id = mesh_packet_id;
 
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+    toDisplayQueueStatusQueue.enqueue(*copied);
+#endif
     if (toPhoneQueueStatusQueue.numFree() == 0) {
         LOG_INFO("tophone queue status queue full, discard oldest");
         meshtastic_QueueStatus *d = toPhoneQueueStatusQueue.dequeuePtr(0);
@@ -492,6 +495,14 @@ void MeshService::sendToPhone(meshtastic_MeshPacket *p)
         return;
     }
 
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+    const bool replaceOldest =
+        p->which_payload_variant == meshtastic_MeshPacket_decoded_tag &&
+        (p->decoded.portnum == meshtastic_PortNum_TEXT_MESSAGE_APP || p->decoded.portnum == meshtastic_PortNum_RANGE_TEST_APP ||
+         p->decoded.portnum == meshtastic_PortNum_ROUTING_APP);
+    toDisplayQueue.enqueue(*p, replaceOldest);
+#endif
+
 #ifdef ARCH_ESP32
 #if !MESHTASTIC_EXCLUDE_STOREFORWARD
     if (moduleConfig.store_forward.enabled && storeForwardModule->isServer() &&
@@ -566,6 +577,9 @@ void MeshService::sendRoutingErrorResponse(meshtastic_Routing_Error error, const
 void MeshService::sendClientNotification(meshtastic_ClientNotification *n)
 {
     LOG_DEBUG("Send client notification to phone");
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+    toDisplayNotificationQueue.enqueue(*n);
+#endif
     if (toPhoneClientNotificationQueue.numFree() == 0) {
         LOG_WARN("ClientNotification queue full, discard oldest");
         meshtastic_ClientNotification *d = toPhoneClientNotificationQueue.dequeuePtr(0);
@@ -641,6 +655,11 @@ int MeshService::onGPSChanged(const meshtastic::GPSStatus *newStatus)
 #endif
 bool MeshService::isToPhoneQueueEmpty()
 {
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+    // An unattended external API must not stop local telemetry updates on the display.
+    if (toDisplayQueue.isEmpty())
+        return true;
+#endif
     return toPhoneQueue.isEmpty();
 }
 

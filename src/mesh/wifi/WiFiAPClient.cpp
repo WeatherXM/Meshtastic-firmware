@@ -237,12 +237,12 @@ static void onNetworkConnected()
         }
 
 #if defined(ARCH_ESP32) && !MESHTASTIC_EXCLUDE_WEBSERVER
-        if (config.display.displaymode != meshtastic_Config_DisplayConfig_DisplayMode_COLOR) {
+        if (config.display.displaymode != meshtastic_Config_DisplayConfig_DisplayMode_COLOR || MESHTASTIC_ENABLE_TFT_NETWORK) {
             initWebServer();
         }
 #endif
 #if !MESHTASTIC_EXCLUDE_SOCKETAPI
-        if (config.display.displaymode != meshtastic_Config_DisplayConfig_DisplayMode_COLOR) {
+        if (config.display.displaymode != meshtastic_Config_DisplayConfig_DisplayMode_COLOR || MESHTASTIC_ENABLE_TFT_NETWORK) {
             initApiServer();
         }
 #endif

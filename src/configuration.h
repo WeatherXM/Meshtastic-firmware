@@ -613,6 +613,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MESHTASTIC_EXCLUDE_STOREFORWARD 1
 #endif
 
+// Opt in to network APIs alongside the TFT, with independent display delivery.
+#ifndef MESHTASTIC_ENABLE_TFT_NETWORK
+#define MESHTASTIC_ENABLE_TFT_NETWORK 0
+#endif
+
 // Turn off wifi even if HW supports wifi (webserver relies on wifi and is also disabled)
 #ifdef MESHTASTIC_EXCLUDE_WIFI
 #define MESHTASTIC_EXCLUDE_WEBSERVER 1

@@ -16,6 +16,9 @@
 #include "StaticPointerQueue.h"
 #endif
 #include "mesh-pb-constants.h"
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+#include "PacketApiQueue.h"
+#endif
 #if defined(ARCH_PORTDUINO)
 #include "../platform/portduino/SimRadio.h"
 #endif
@@ -68,6 +71,12 @@ class MeshService
     PointerQueue<meshtastic_ClientNotification> toPhoneClientNotificationQueue;
 #else
     StaticPointerQueue<meshtastic_ClientNotification, MAX_RX_NOTIFICATION_TOPHONE> toPhoneClientNotificationQueue;
+#endif
+
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+    PacketApiQueue<meshtastic_MeshPacket, 32> toDisplayQueue;
+    PacketApiQueue<meshtastic_QueueStatus, MAX_RX_QUEUESTATUS_TOPHONE> toDisplayQueueStatusQueue;
+    PacketApiQueue<meshtastic_ClientNotification, MAX_RX_NOTIFICATION_TOPHONE> toDisplayNotificationQueue;
 #endif
 
     // This holds the last QueueStatus send
@@ -126,19 +135,46 @@ class MeshService
 
     /// Return the next packet destined to the phone.  FIXME, somehow use fromNum to allow the phone to retry the
     /// last few packets if needs to.
-    meshtastic_MeshPacket *getForPhone() { return toPhoneQueue.dequeuePtr(0); }
+    meshtastic_MeshPacket *getForPhone(bool forDisplay = false)
+    {
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+        if (forDisplay)
+            return toDisplayQueue.dequeue(packetPool);
+#else
+        (void)forDisplay;
+#endif
+        return toPhoneQueue.dequeuePtr(0);
+    }
 
     /// Allows the bluetooth handler to free packets after they have been sent
     void releaseToPool(meshtastic_MeshPacket *p) { packetPool.release(p); }
 
     /// Return the next QueueStatus packet destined to the phone.
-    meshtastic_QueueStatus *getQueueStatusForPhone() { return toPhoneQueueStatusQueue.dequeuePtr(0); }
+    meshtastic_QueueStatus *getQueueStatusForPhone(bool forDisplay = false)
+    {
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+        if (forDisplay)
+            return toDisplayQueueStatusQueue.dequeue(queueStatusPool);
+#else
+        (void)forDisplay;
+#endif
+        return toPhoneQueueStatusQueue.dequeuePtr(0);
+    }
 
     /// Return the next MqttClientProxyMessage packet destined to the phone.
     meshtastic_MqttClientProxyMessage *getMqttClientProxyMessageForPhone() { return toPhoneMqttProxyQueue.dequeuePtr(0); }
 
     /// Return the next ClientNotification packet destined to the phone.
-    meshtastic_ClientNotification *getClientNotificationForPhone() { return toPhoneClientNotificationQueue.dequeuePtr(0); }
+    meshtastic_ClientNotification *getClientNotificationForPhone(bool forDisplay = false)
+    {
+#if MESHTASTIC_ENABLE_TFT_NETWORK
+        if (forDisplay)
+            return toDisplayNotificationQueue.dequeue(clientNotificationPool);
+#else
+        (void)forDisplay;
+#endif
+        return toPhoneClientNotificationQueue.dequeuePtr(0);
+    }
 
     // search the queue for a request id and return the matching nodenum
     NodeNum getNodenumFromRequestId(uint32_t request_id);
