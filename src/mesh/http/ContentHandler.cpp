@@ -92,6 +92,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
 
 #if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     ResourceNode *nodeWeather = new ResourceNode("/api/v1/weather", "GET", &handleAPIv1Weather);
+    ResourceNode *nodeWeatherNodes = new ResourceNode("/api/v1/weather/nodes", "GET", &handleAPIv1WeatherNodes);
     ResourceNode *nodeObservations = new ResourceNode("/api/v1/observations", "GET", &handleAPIv1Weather);
     ResourceNode *nodeObservation = new ResourceNode("/api/v1/observation", "GET", &handleAPIv1Weather);
     ResourceNode *nodeWxInfo = new ResourceNode("/api/v1/info", "GET", &handleAPIv1WeatherInfo);
@@ -117,6 +118,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     secureServer->registerNode(nodeAdmin);
 #if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     secureServer->registerNode(nodeWeather);
+    secureServer->registerNode(nodeWeatherNodes);
     secureServer->registerNode(nodeObservations);
     secureServer->registerNode(nodeObservation);
     secureServer->registerNode(nodeWxInfo);
@@ -140,6 +142,7 @@ void registerHandlers(HTTPServer *insecureServer, HTTPSServer *secureServer)
     insecureServer->registerNode(nodeAdmin);
 #if (defined(WG1200) || defined(HAS_WEATHERXM)) && !MESHTASTIC_EXCLUDE_WEATHERXM
     insecureServer->registerNode(nodeWeather);
+    insecureServer->registerNode(nodeWeatherNodes);
     insecureServer->registerNode(nodeObservations);
     insecureServer->registerNode(nodeObservation);
     insecureServer->registerNode(nodeWxInfo);
@@ -974,12 +977,137 @@ void handleAPIv1Weather(HTTPRequest *req, HTTPResponse *res)
     res->setHeader("Access-Control-Allow-Methods", "GET");
 
     if (weatherXMModule) {
-        std::string json = weatherXMModule->getData().toJson(weatherXMModule->isImperial());
+        weatherxm::WeatherData data;
+        weatherXMModule->getWeatherDataCopy(data);
+        std::string json = data.toJson(weatherXMModule->isImperial());
         writeAll(res, json);
     } else {
         std::string err = "{\"error\":\"WeatherXM module not active\"}";
         writeAll(res, err);
     }
+}
+
+void handleAPIv1WeatherNodes(HTTPRequest *req, HTTPResponse *res)
+{
+    if (webServerThread)
+        webServerThread->markActivity();
+    res->setHeader("Content-Type", "application/json");
+    res->setHeader("Access-Control-Allow-Origin", "*");
+    res->setHeader("Cache-Control", "no-store");
+    if (!weatherXMModule) {
+        res->setStatusCode(503);
+        writeAll(res, "{\"error\":\"Weather telemetry unavailable\"}");
+        return;
+    }
+    auto nodes = weatherXMModule->getEnvironmentNodeNums();
+    if (!writeAll(res, "{\"nodes\":["))
+        return;
+    bool firstNode = true;
+    for (auto nodeNum : nodes) {
+        WeatherXMModule::EnvironmentStation station;
+        if (!weatherXMModule->getEnvironmentStationCopy(nodeNum, station))
+            continue;
+        char id[10];
+        snprintf(id, sizeof(id), "!%08x", (unsigned int)nodeNum);
+        std::string out = firstNode ? "{" : ",{";
+        firstNode = false;
+        out += "\"node_id\":" + jsonEscape(id) + ",\"name\":" + jsonEscape(station.name);
+        out += ",\"age_seconds\":" + (station.hasReceiveTime ? jsonNum(station.ageSeconds) : "null");
+        out += ",\"metrics\":{";
+        bool firstMetric = true;
+        auto metric = [&](const char *name, double value) {
+            if (!firstMetric)
+                out += ",";
+            firstMetric = false;
+            out += jsonEscape(name) + ":" + jsonNum(value);
+        };
+        const auto &env = station.metrics;
+        if (env.has_temperature)
+            metric("temperature", env.temperature);
+        if (env.has_relative_humidity)
+            metric("relative_humidity", env.relative_humidity);
+        if (env.has_barometric_pressure)
+            metric("barometric_pressure", env.barometric_pressure);
+        if (env.has_gas_resistance)
+            metric("gas_resistance", env.gas_resistance);
+        if (env.has_voltage)
+            metric("voltage", env.voltage);
+        if (env.has_current)
+            metric("current", env.current);
+        if (env.has_iaq)
+            metric("iaq", env.iaq);
+        if (env.has_distance)
+            metric("distance", env.distance);
+        if (env.has_lux)
+            metric("lux", env.lux);
+        if (env.has_white_lux)
+            metric("white_lux", env.white_lux);
+        if (env.has_ir_lux)
+            metric("ir_lux", env.ir_lux);
+        if (env.has_uv_lux)
+            metric("uv_lux", env.uv_lux);
+        if (env.has_wind_direction)
+            metric("wind_direction", env.wind_direction);
+        if (env.has_wind_speed)
+            metric("wind_speed", env.wind_speed);
+        if (env.has_weight)
+            metric("weight", env.weight);
+        if (env.has_wind_gust)
+            metric("wind_gust", env.wind_gust);
+        if (env.has_wind_lull)
+            metric("wind_lull", env.wind_lull);
+        if (env.has_radiation)
+            metric("radiation", env.radiation);
+        if (env.has_rainfall_1h)
+            metric("rainfall_1h", env.rainfall_1h);
+        if (env.has_rainfall_24h)
+            metric("rainfall_24h", env.rainfall_24h);
+        if (env.has_soil_moisture)
+            metric("soil_moisture", env.soil_moisture);
+        if (env.has_soil_temperature)
+            metric("soil_temperature", env.soil_temperature);
+        if (env.has_adc_voltage_ch0)
+            metric("adc_voltage_ch0", env.adc_voltage_ch0);
+        if (env.has_adc_voltage_ch1)
+            metric("adc_voltage_ch1", env.adc_voltage_ch1);
+        if (env.has_adc_voltage_ch2)
+            metric("adc_voltage_ch2", env.adc_voltage_ch2);
+        if (env.has_adc_voltage_ch3)
+            metric("adc_voltage_ch3", env.adc_voltage_ch3);
+        if (env.has_adc_voltage_ch4)
+            metric("adc_voltage_ch4", env.adc_voltage_ch4);
+        if (env.has_adc_voltage_ch5)
+            metric("adc_voltage_ch5", env.adc_voltage_ch5);
+        if (env.has_adc_voltage_ch6)
+            metric("adc_voltage_ch6", env.adc_voltage_ch6);
+        if (env.has_adc_voltage_ch7)
+            metric("adc_voltage_ch7", env.adc_voltage_ch7);
+        if (env.has_one_wire_temperature_ch0)
+            metric("one_wire_temperature_ch0", env.one_wire_temperature_ch0);
+        if (env.has_one_wire_temperature_ch1)
+            metric("one_wire_temperature_ch1", env.one_wire_temperature_ch1);
+        if (env.has_one_wire_temperature_ch2)
+            metric("one_wire_temperature_ch2", env.one_wire_temperature_ch2);
+        if (env.has_one_wire_temperature_ch3)
+            metric("one_wire_temperature_ch3", env.one_wire_temperature_ch3);
+        if (env.has_one_wire_temperature_ch4)
+            metric("one_wire_temperature_ch4", env.one_wire_temperature_ch4);
+        if (env.has_one_wire_temperature_ch5)
+            metric("one_wire_temperature_ch5", env.one_wire_temperature_ch5);
+        if (env.has_one_wire_temperature_ch6)
+            metric("one_wire_temperature_ch6", env.one_wire_temperature_ch6);
+        if (env.has_one_wire_temperature_ch7)
+            metric("one_wire_temperature_ch7", env.one_wire_temperature_ch7);
+        if (env.has_lightning_strike_count_1h)
+            metric("lightning_strike_count_1h", env.lightning_strike_count_1h);
+        if (env.has_lightning_distance_km)
+            metric("lightning_distance_km", env.lightning_distance_km);
+        out += "}}";
+        if (!writeAll(res, out))
+            return;
+        yield();
+    }
+    writeAll(res, "]}");
 }
 
 void handleAPIv1WeatherInfo(HTTPRequest *req, HTTPResponse *res)

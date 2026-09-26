@@ -15,6 +15,7 @@ void handleNodes(HTTPRequest *req, HTTPResponse *res);
 void handleAdmin(HTTPRequest *req, HTTPResponse *res);
 #if defined(WG1200) || defined(HAS_WEATHERXM)
 void handleAPIv1Weather(HTTPRequest *req, HTTPResponse *res);
+void handleAPIv1WeatherNodes(HTTPRequest *req, HTTPResponse *res);
 void handleAPIv1WeatherInfo(HTTPRequest *req, HTTPResponse *res);
 void handleAPIv1WeatherInject(HTTPRequest *req, HTTPResponse *res);
 void handleWeatherDashboard(HTTPRequest *req, HTTPResponse *res);

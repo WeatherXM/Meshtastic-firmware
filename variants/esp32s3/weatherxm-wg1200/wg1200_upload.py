@@ -843,7 +843,9 @@ def cmd_upload(upload_port, upload_speed, firmware_bin):
         build_dir = os.path.dirname(os.path.abspath(firmware_bin))
         bin_name = os.path.basename(firmware_bin)
         clean_base = re.sub(
-            r"(\d+\.\d+\.\d+)\.[0-9a-fA-F]+", r"\1", os.path.splitext(bin_name)[0]
+            r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)\.[0-9a-fA-F]+$",
+            r"\1",
+            os.path.splitext(bin_name)[0],
         )
         signed_bin = os.path.join(build_dir, f"{clean_base}-signed.bin")
 

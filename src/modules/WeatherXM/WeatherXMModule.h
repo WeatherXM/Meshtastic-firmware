@@ -13,6 +13,7 @@
 #include <OLEDDisplay.h>
 #include <OLEDDisplayUi.h>
 #include <map>
+#include <set>
 #include <vector>
 
 class WeatherXMModule : public MeshModule, public Observable<const UIFrameEvent *>, private concurrency::OSThread
@@ -35,6 +36,16 @@ class WeatherXMModule : public MeshModule, public Observable<const UIFrameEvent 
     const weatherxm::WeatherData &getData() const { return currentData; }
     weatherxm::WeatherData &getMutableData() { return currentData; }
     bool getWeatherDataCopy(weatherxm::WeatherData &out);
+
+    struct EnvironmentStation {
+        uint32_t nodeNum = 0;
+        char name[40] = {};
+        meshtastic_EnvironmentMetrics metrics = meshtastic_EnvironmentMetrics_init_zero;
+        bool hasReceiveTime = false;
+        uint32_t ageSeconds = 0;
+    };
+    bool getEnvironmentStationCopy(uint32_t nodeNum, EnvironmentStation &out);
+    std::vector<uint32_t> getEnvironmentNodeNums();
 
     // Units toggle
     void toggleUnits();
@@ -60,6 +71,8 @@ class WeatherXMModule : public MeshModule, public Observable<const UIFrameEvent 
         uint32_t nodeNum = 0;
         weatherxm::WeatherData data;
         uint32_t lastHeardMs = 0;
+        bool isMeshTelemetry = false;
+        bool receivedThisBoot = false;
     };
 
     concurrency::Lock dataLock;

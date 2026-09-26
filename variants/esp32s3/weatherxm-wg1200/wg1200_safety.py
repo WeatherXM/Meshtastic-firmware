@@ -26,7 +26,7 @@ except ImportError:
 
 
 def get_clean_version(env, progname):
-    """Retrieve clean short version string (e.g. '2.8.1') without commit hash."""
+    """Retrieve clean short version string (e.g. '2.8.1-wxm.1') without commit hash."""
     version_file = os.path.join(project_dir, "version.properties")
     if os.path.isfile(version_file):
         try:
@@ -35,10 +35,15 @@ def get_clean_version(env, progname):
             maj = cp.get("VERSION", "major").strip()
             min = cp.get("VERSION", "minor").strip()
             bld = cp.get("VERSION", "build").strip()
+            rev = cp.get(
+                "VERSION", "rev", fallback=cp.get("VERSION", "revision", fallback="")
+            ).strip()
+            if rev:
+                return f"{maj}.{min}.{bld}-{rev}"
             return f"{maj}.{min}.{bld}"
         except Exception:
             pass
-    m = re.search(r"(\d+\.\d+\.\d+)", progname)
+    m = re.search(r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?(?:-\w+)?)", progname)
     return m.group(1) if m else "2.8.1"
 
 

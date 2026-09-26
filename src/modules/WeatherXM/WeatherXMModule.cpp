@@ -21,6 +21,7 @@ WeatherXMModule *weatherXMModule = nullptr;
 WeatherXMModule::WeatherXMModule() : MeshModule("Weather", meshtastic_PortNum_TELEMETRY_APP), concurrency::OSThread("WeatherXM")
 {
     isPromiscuous = true;
+    setup();
 }
 
 bool WeatherXMModule::wantPacket(const meshtastic_MeshPacket *p)
@@ -39,6 +40,9 @@ ProcessMessage WeatherXMModule::handleReceived(const meshtastic_MeshPacket &mp)
         if (pb_decode_from_bytes(mp.decoded.payload.bytes, mp.decoded.payload.size, &meshtastic_Telemetry_msg, &telemetry)) {
             if (telemetry.which_variant == meshtastic_Telemetry_environment_metrics_tag) {
                 ingestMeshTelemetry(mp, telemetry.variant.environment_metrics);
+                if (nodeDB) {
+                    nodeDB->updateTelemetry(getFrom(&mp), telemetry, RX_SRC_RADIO);
+                }
             }
         }
     } else if (mp.decoded.portnum == meshtastic_PortNum_PRIVATE_APP) {
@@ -54,7 +58,7 @@ void WeatherXMModule::setup()
     updateOnboardSensors();
     syncWithNodeDB();
     updateActiveStationRotation();
-    setInterval(2000);
+    setIntervalFromNow(2000);
 }
 
 int32_t WeatherXMModule::runOnce()
@@ -114,6 +118,14 @@ void WeatherXMModule::prevStation()
 bool WeatherXMModule::getWeatherDataCopy(weatherxm::WeatherData &out)
 {
     concurrency::LockGuard guard(&dataLock);
+    if (!currentData.has_station_data && !activeStations.empty()) {
+        showingStationNode = activeStations.rbegin()->first;
+        currentData = activeStations.rbegin()->second.data;
+        if (currentData.barometric_pressure <= 0.0f && hasOnboardBmp390) {
+            currentData.barometric_pressure = onboardPressureHpa;
+            currentData.has_bmp390 = true;
+        }
+    }
     out = currentData;
     return true;
 }
@@ -121,6 +133,103 @@ bool WeatherXMModule::getWeatherDataCopy(weatherxm::WeatherData &out)
 bool WeatherXMModule::isCurrentStationFavorite() const
 {
     return (showingStationNode != 0 && nodeDB && nodeDB->isFavorite(showingStationNode));
+}
+
+bool WeatherXMModule::getEnvironmentStationCopy(uint32_t nodeNum, EnvironmentStation &out)
+{
+    concurrency::LockGuard guard(&dataLock);
+    out = EnvironmentStation{};
+    out.nodeNum = nodeNum;
+
+    bool hasMetrics = false;
+    if (nodeDB && nodeDB->copyNodeEnvironment(nodeNum, out.metrics)) {
+        hasMetrics = true;
+    }
+
+    auto it = activeStations.find(nodeNum);
+    if (it != activeStations.end()) {
+        if (!hasMetrics) {
+            out.metrics.has_temperature = true;
+            out.metrics.temperature = it->second.data.temperature;
+            out.metrics.has_relative_humidity = true;
+            out.metrics.relative_humidity = it->second.data.humidity;
+            if (it->second.data.barometric_pressure > 0.0f) {
+                out.metrics.has_barometric_pressure = true;
+                out.metrics.barometric_pressure = it->second.data.barometric_pressure;
+            }
+            if (it->second.data.wind_speed > 0.0f) {
+                out.metrics.has_wind_speed = true;
+                out.metrics.wind_speed = it->second.data.wind_speed;
+            }
+            if (it->second.data.wind_gust > 0.0f) {
+                out.metrics.has_wind_gust = true;
+                out.metrics.wind_gust = it->second.data.wind_gust;
+            }
+            if (it->second.data.wind_direction > 0) {
+                out.metrics.has_wind_direction = true;
+                out.metrics.wind_direction = it->second.data.wind_direction;
+            }
+            if (it->second.data.precipitation_rate > 0.0f) {
+                out.metrics.has_rainfall_1h = true;
+                out.metrics.rainfall_1h = it->second.data.precipitation_rate;
+            }
+            if (it->second.data.precipitation_accum > 0.0f) {
+                out.metrics.has_rainfall_24h = true;
+                out.metrics.rainfall_24h = it->second.data.precipitation_accum;
+            }
+            if (it->second.data.solar_radiation > 0.0f) {
+                out.metrics.has_lux = true;
+                out.metrics.lux = it->second.data.solar_radiation * 126.7f;
+            }
+            if (it->second.data.uv_index > 0) {
+                out.metrics.has_uv_lux = true;
+                out.metrics.uv_lux = it->second.data.uv_index;
+            }
+            hasMetrics = true;
+        }
+
+        if (it->second.receivedThisBoot) {
+            out.hasReceiveTime = true;
+            out.ageSeconds = (uint32_t)(Time::getMillis() - it->second.lastHeardMs) / 1000;
+        }
+
+        if (it->second.data.station_name[0]) {
+            snprintf(out.name, sizeof(out.name), "%s", it->second.data.station_name);
+        }
+    }
+
+    if (!hasMetrics)
+        return false;
+
+    if (!out.name[0]) {
+        const auto *node = nodeDB ? nodeDB->getMeshNode(nodeNum) : nullptr;
+        if (node && nodeInfoLiteHasUser(node) && node->long_name[0])
+            snprintf(out.name, sizeof(out.name), "%s", node->long_name);
+        else if (node && nodeInfoLiteHasUser(node) && node->short_name[0])
+            snprintf(out.name, sizeof(out.name), "%s", node->short_name);
+        else
+            snprintf(out.name, sizeof(out.name), "!%08x", (unsigned int)nodeNum);
+    }
+    return true;
+}
+
+std::vector<uint32_t> WeatherXMModule::getEnvironmentNodeNums()
+{
+    concurrency::LockGuard guard(&dataLock);
+    std::set<uint32_t> uniqueNodes;
+
+    if (nodeDB) {
+        auto envNodes = nodeDB->snapshotEnvironmentNodeNums(0);
+        for (uint32_t n : envNodes) {
+            uniqueNodes.insert(n);
+        }
+    }
+
+    for (const auto &pair : activeStations) {
+        uniqueNodes.insert(pair.first);
+    }
+
+    return std::vector<uint32_t>(uniqueNodes.begin(), uniqueNodes.end());
 }
 
 void WeatherXMModule::updateOnboardSensors()
@@ -172,6 +281,7 @@ void WeatherXMModule::syncWithNodeDB()
             if (nodeDB->copyNodeEnvironment(n, env)) {
                 StationRecord &rec = activeStations[n];
                 rec.nodeNum = n;
+                rec.isMeshTelemetry = true;
                 rec.lastHeardMs = Time::getMillis();
                 mapEnvironmentMetricsToWeatherData(n, env, rec.data);
                 const auto *node = nodeDB->getMeshNode(n);
@@ -199,7 +309,11 @@ std::vector<uint32_t> WeatherXMModule::getActiveRotationPool()
 
     for (auto it = activeStations.begin(); it != activeStations.end();) {
         if (Throttle::hasElapsed(it->second.lastHeardMs, STATION_STALE_TIMEOUT_MS)) {
-            it = activeStations.erase(it);
+            // Retain receive times for cached mesh readings without renewing their TFT rotation age.
+            if (it->second.isMeshTelemetry && nodeDB && nodeDB->hasNodeEnvironment(it->first))
+                ++it;
+            else
+                it = activeStations.erase(it);
             continue;
         }
 
@@ -329,6 +443,8 @@ void WeatherXMModule::ingestMeshTelemetry(const meshtastic_MeshPacket &mp, const
     concurrency::LockGuard guard(&dataLock);
     StationRecord &rec = activeStations[fromNode];
     rec.nodeNum = fromNode;
+    rec.isMeshTelemetry = true;
+    rec.receivedThisBoot = true;
     rec.lastHeardMs = Time::getMillis();
 
     mapEnvironmentMetricsToWeatherData(fromNode, env, rec.data);
