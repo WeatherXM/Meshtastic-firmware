@@ -1,3 +1,12 @@
+/*
+ * WeatherXM WG1200 board support
+ *
+ * WG1200 is a distinct WeatherXM hardware platform. The initial Meshtastic
+ * port used the Seeed Studio SenseCAP Indicator implementation as a reference,
+ * but the WG1200 has a WeatherXM-specific PCB, pinout and peripheral design
+ * and must not identify itself as a SenseCAP Indicator.
+ */
+
 #define I2C_SDA 39
 #define I2C_SCL 40
 

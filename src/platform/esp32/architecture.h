@@ -176,8 +176,12 @@
 #define HW_VENDOR meshtastic_HardwareModel_HELTEC_VISION_MASTER_E213
 #elif defined(HELTEC_VISION_MASTER_E290)
 #define HW_VENDOR meshtastic_HardwareModel_HELTEC_VISION_MASTER_E290
-#elif defined(SENSECAP_INDICATOR) || defined(WG1200)
+#elif defined(SENSECAP_INDICATOR)
 #define HW_VENDOR meshtastic_HardwareModel_SENSECAP_INDICATOR
+#elif defined(WG1200)
+// WG1200 is a distinct WeatherXM hardware platform. Use PRIVATE_HW until
+// Meshtastic assigns it a dedicated HardwareModel enum value.
+#define HW_VENDOR meshtastic_HardwareModel_PRIVATE_HW
 #elif defined(SEEED_XIAO_S3)
 #define HW_VENDOR meshtastic_HardwareModel_SEEED_XIAO_S3
 #elif defined(MESH_TAB)

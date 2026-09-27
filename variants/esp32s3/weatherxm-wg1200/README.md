@@ -8,6 +8,18 @@ $$\text{WeatherXM (Factory)} \longleftrightarrow \text{Meshtastic (OTA)}$$
 
 A production WG1200 can transition back and forth between WeatherXM and Meshtastic indefinitely, retaining hardware device certificates, cryptographic identity, and factory sensor calibrations.
 
+### Hardware Identity & Provenance
+
+The WG1200 is treated as a **distinct WeatherXM hardware product**, not as a Seeed Studio SenseCAP Indicator variant.
+
+- **Manufacturer:** WeatherXM AG
+- **Product model:** WG1200 (D1 Gateway)
+- **Meshtastic hardware identity:** `PRIVATE_HW` (255) until the Meshtastic protobuf assigns WG1200 a dedicated `HardwareModel` value.
+- **Build/device slug:** `WEATHERXM_WG1200`.
+- **Source provenance:** the first Meshtastic port used the Seeed Studio SenseCAP Indicator/D1L implementation as a starting reference because the products share the ESP32-S3, SX1262 and ST7701-class display architecture. The WG1200 PCB, pin routing, radio/peripheral integration, flash layout and production identity are WeatherXM-specific.
+
+The Seeed origin is therefore retained as **source attribution**, while firmware metadata and on-air hardware identity describe the product that is actually being programmed. Once Meshtastic assigns a permanent WG1200 hardware-model ID, replace `PRIVATE_HW`/255 with that assigned value without changing the WeatherXM board namespace.
+
 ---
 
 ## 2. Firmware Features & Capabilities
